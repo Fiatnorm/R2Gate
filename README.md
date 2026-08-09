@@ -1,5 +1,7 @@
 # R2Gate
 
+[![CI](https://github.com/Fiatnorm/R2Gate/actions/workflows/ci.yml/badge.svg)](https://github.com/Fiatnorm/R2Gate/actions/workflows/ci.yml)
+
 R2Gate 是一个精简的 Cloudflare R2 文件读取与上传工具：
 
 - Worker / Pages 使用 R2 Binding 读取文件。
@@ -157,6 +159,7 @@ Copy-Item .\config.example.json .\config.json
 ```
 
 `LOCAL_FILE` 可以是绝对路径，也可以是相对于 `config.json` 的路径。
+上传时会优先根据 R2 Object Key、其次根据本地文件扩展名自动写入 `Content-Type`。脚本为 CSV、XML、ZIP、GZIP、7z、RAR、WebP、FLAC、AAC、AVI、WOFF、WOFF2、TTF、OTF 和 SH 提供跨平台固定映射，其余类型交给 Python `mimetypes` 判断，无法识别时使用 `application/octet-stream`。
 
 运行：
 
@@ -184,3 +187,15 @@ Copy-Item .\config.example.json .\config.json
 - 不要把 `R2_SECRET_ACCESS_KEY` 放入 Worker、Pages、URL 或前端代码。
 - R2 Bucket 应保持非公开，避免通过 `r2.dev` 或 Bucket 自定义域名绕过 Worker。
 - `ACCESS_KEYS` 是普通文本访问密码映射，可能出现在 Dashboard、URL、浏览器历史和访问日志中；不要复用重要密码。
+
+## 持续集成
+
+GitHub Actions 会在 Push、Pull Request 和手动触发时运行以下只读检查：
+
+- Worker 根路径、鉴权、GET、HEAD、403、404、405 和 R2 异常分支。
+- Python CREATE/UPDATE、`Content-Type` 判断与未知类型回退。
+- Worker 与 Pages 运行时代码一致性。
+- Python 依赖、JSON 和 TOML 配置格式。
+- `config.json`、`.venv` 和本地环境文件未被 Git 跟踪。
+
+CI 不包含 Cloudflare 部署步骤，也不需要保存 Cloudflare API Token。
