@@ -16,11 +16,17 @@ R2Gate 是一个精简的 Cloudflare R2 文件读取与上传工具：
 - `config.example.json`：不含真实密钥的上传配置示例。
 - `config.json`：本地真实上传配置，已被 Git 忽略。
 
-访问 Worker 或 Pages 的根路径会返回：
+访问 Worker 或 Pages 的根路径时，程序会先检查 `BUCKET` Binding 和 `ACCESS_KEYS` 普通文本变量。两项配置有效后才返回：
 
 ```text
 R2Gate is running successfully.
 ```
+
+自检失败时返回 `500` 和对应英文提示：
+
+- 未正确添加 R2 Binding：`R2 bucket binding is not configured`
+- 未添加或留空 `ACCESS_KEYS`：`ACCESS_KEYS variable is not configured`
+- `ACCESS_KEYS` 不是有效 JSON 对象：`Invalid ACCESS_KEYS configuration`
 
 ## Worker 部署
 
@@ -37,7 +43,7 @@ R2Gate is running successfully.
    - Value：`{"files/private-a.txt":"key-a","files/private-b.txt":"key-b"}`
 5. 再次部署，然后访问 Worker 提供的 `workers.dev` 链接。
 
-`ACCESS_KEYS` 不使用 Secret 类型。不添加该变量或将其设置为 `{}` 时，所有文件都不需要访问密钥。
+`ACCESS_KEYS` 不使用 Secret 类型，但必须添加。将其设置为 `{}` 时，所有文件都不需要访问密钥。
 
 ### Wrangler 部署
 
@@ -77,6 +83,30 @@ https://your-worker.your-subdomain.workers.dev/
 5. 为 Production 和需要使用的 Preview 环境配置相同绑定，然后重新部署。
 
 Pages 根路径返回相同的成功消息，文件访问规则也与 Worker 完全一致。
+
+## Pages Fork 仓库部署
+
+通过 GitHub Fork 部署后，每次推送到 Fork 仓库都可以自动触发 Pages 构建：
+
+1. 打开 [Fiatnorm/R2Gate](https://github.com/Fiatnorm/R2Gate)，点击 **Fork**，将仓库复制到自己的 GitHub 账号。
+2. 进入 Cloudflare **Workers & Pages > Create application > Pages > Connect to Git**。
+3. 授权 Cloudflare GitHub App，然后选择刚刚 Fork 的 `R2Gate` 仓库。
+4. 使用以下构建配置：
+   - Production branch：`main`
+   - Framework preset：`None`
+   - Build command：`exit 0`
+   - Build output directory：`pages-dist`
+   - Root directory：留空
+5. 点击 **Save and Deploy** 完成第一次部署。
+6. 进入 Pages 项目 **Settings > Bindings**，添加 R2 Bucket Binding：
+   - Variable name：`BUCKET`
+   - R2 bucket：选择实际 Bucket
+7. 进入 **Settings > Variables and Secrets**，添加普通文本变量：
+   - Variable name：`ACCESS_KEYS`
+   - Value：私有文件使用 JSON 映射；全部公开时填写 `{}`
+8. 为 Production 和需要使用的 Preview 环境配置相同内容，然后重新部署。
+
+Git 集成项目会在 Fork 仓库的 `main` 分支有新提交时自动部署。Cloudflare Pages 的 Git 集成项目与 Direct Upload 项目是两种不同的项目类型，应在创建项目时选择需要的方式。
 
 ## 文件访问
 

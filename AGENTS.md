@@ -12,7 +12,7 @@
 - `worker.mjs` 是 Worker 入口。
 - `pages-dist/_worker.js` 是 Pages Direct Upload 入口。
 - 修改运行时行为时必须同步这两个文件，并验证内容完全一致。
-- 根路径必须返回英文 `R2Gate is running successfully.`。
+- 根路径必须先验证 `BUCKET` Binding 和 `ACCESS_KEYS` 普通文本变量；两者有效时才返回英文 `R2Gate is running successfully.`。
 - Pages 上传只能使用 `pages-dist`，不得上传仓库根目录。
 
 ## Python
@@ -34,4 +34,4 @@
 - Python：`.venv\Scripts\python.exe -m pip check`
 - 配置示例：使用 Python `json` 模块解析 `config.example.json`
 - Pages 一致性：比较 `worker.mjs` 与 `pages-dist/_worker.js`
-- 行为验证至少覆盖根路径、GET、HEAD、403、404、405、无绑定和 R2 异常。
+- 行为验证至少覆盖根路径成功、缺少 Binding、缺少或无效 `ACCESS_KEYS`、GET、HEAD、403、404、405 和 R2 异常。

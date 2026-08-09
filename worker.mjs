@@ -12,22 +12,32 @@ export default {
     const url = new URL(request.url);
     const isHead = request.method === "HEAD";
 
+    if (
+      !env.BUCKET ||
+      typeof env.BUCKET.get !== "function" ||
+      typeof env.BUCKET.head !== "function"
+    ) {
+      return new Response("R2 bucket binding is not configured", { status: 500 });
+    }
+
+    if (typeof env.ACCESS_KEYS !== "string" || !env.ACCESS_KEYS.trim()) {
+      return new Response("ACCESS_KEYS variable is not configured", { status: 500 });
+    }
+
+    let accessKeys;
+    try {
+      accessKeys = JSON.parse(env.ACCESS_KEYS);
+      if (accessKeys === null || Array.isArray(accessKeys) || typeof accessKeys !== "object") {
+        throw new Error();
+      }
+    } catch {
+      return new Response("Invalid ACCESS_KEYS configuration", { status: 500 });
+    }
+
     if (url.pathname === "/") {
       return new Response(isHead ? null : SUCCESS_MESSAGE, {
         headers: { "content-type": "text/plain; charset=utf-8" },
       });
-    }
-
-    let accessKeys = {};
-    if (env.ACCESS_KEYS) {
-      try {
-        accessKeys = JSON.parse(env.ACCESS_KEYS);
-        if (accessKeys === null || Array.isArray(accessKeys) || typeof accessKeys !== "object") {
-          throw new Error();
-        }
-      } catch {
-        return new Response("Invalid ACCESS_KEYS configuration", { status: 500 });
-      }
     }
 
     const objectKey = url.pathname.slice(1);
@@ -39,10 +49,6 @@ export default {
 
     if (requiredKey && url.searchParams.get("key") !== requiredKey) {
       return new Response("Forbidden", { status: 403 });
-    }
-
-    if (!env.BUCKET) {
-      return new Response("R2 bucket binding is not configured", { status: 500 });
     }
 
     try {
