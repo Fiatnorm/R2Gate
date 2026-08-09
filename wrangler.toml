@@ -1,0 +1,10 @@
+name = "r2-gate"
+main = "worker.mjs"
+compatibility_date = "2026-08-09"
+
+[vars]
+ACCESS_KEYS = "{}"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "YOUR_BUCKET_NAME"
