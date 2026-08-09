@@ -1,4 +1,5 @@
 import json
+import mimetypes
 import sys
 from pathlib import Path
 
@@ -12,6 +13,37 @@ REQUIRED_CONFIG_KEYS = (
     "LOCAL_FILE",
     "R2_OBJECT_KEY",
 )
+
+MIME_TYPE_OVERRIDES = {
+    ".csv": "text/csv",
+    ".xml": "application/xml",
+    ".zip": "application/zip",
+    ".gz": "application/gzip",
+    ".gzip": "application/gzip",
+    ".7z": "application/x-7z-compressed",
+    ".rar": "application/vnd.rar",
+    ".webp": "image/webp",
+    ".flac": "audio/flac",
+    ".aac": "audio/aac",
+    ".avi": "video/x-msvideo",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".ttf": "font/ttf",
+    ".otf": "font/otf",
+    ".sh": "text/x-sh",
+}
+
+def guess_content_type(*file_names):
+    for file_name in file_names:
+        override = MIME_TYPE_OVERRIDES.get(Path(file_name).suffix.lower())
+        if override:
+            return override
+
+        guessed_type = mimetypes.guess_type(file_name)[0]
+        if guessed_type:
+            return guessed_type
+
+    return "application/octet-stream"
 
 
 def main():
@@ -46,6 +78,8 @@ def main():
         print(f"[ERROR] Local file not found: {local_file}", file=sys.stderr)
         return 1
 
+    content_type = guess_content_type(object_key, local_file.name)
+
     try:
         import boto3
         from botocore.exceptions import ClientError
@@ -68,7 +102,12 @@ def main():
                 raise
             action = "CREATE"
 
-        client.upload_file(str(local_file), bucket, object_key)
+        client.upload_file(
+            str(local_file),
+            bucket,
+            object_key,
+            ExtraArgs={"ContentType": content_type},
+        )
         print(f"[{action}] {object_key}")
         print("[SUCCESS] Upload completed")
         return 0

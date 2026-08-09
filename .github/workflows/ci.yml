@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Test Python uploader
+        run: |
+          python -m pip check
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Validate project configuration
+        run: |
+          python -m json.tool config.example.json > /dev/null
+          python -c "import pathlib, tomllib; tomllib.loads(pathlib.Path('wrangler.toml').read_text(encoding='utf-8'))"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Test Worker and Pages runtime
+        run: |
+          node --check worker.mjs
+          node --test tests/test_worker.mjs
+          cmp worker.mjs pages-dist/_worker.js
+
+      - name: Verify protected files are not tracked
+        run: |
+          test ! -e config.json
+          ! git ls-files --error-unmatch config.json
+          ! git ls-files | grep -E '^(\.venv/|\.env|\.dev\.vars)'
