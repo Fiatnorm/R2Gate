@@ -18,11 +18,13 @@ R2Gate 是一个精简的 Cloudflare R2 文件读取与上传工具：
 - `config.example.json`：不含真实密钥的上传配置示例。
 - `config.json`：本地真实上传配置，已被 Git 忽略。
 
-访问 Worker 或 Pages 的根路径时，程序会先检查 `BUCKET` Binding 和 `ACCESS_KEYS` 普通文本变量。两项配置有效后才返回：
+访问 Worker 或 Pages 的根路径时，程序会先检查 `BUCKET` Binding 和 `ACCESS_KEYS` 普通文本变量。两项配置有效后才返回包含以下英文状态信息和 GitHub 项目链接的 HTML 页面：
 
 ```text
 R2Gate is running successfully.
 ```
+
+页面使用内置的透明 SVG 数据库图标作为浏览器 favicon；`/favicon.svg` 与兼容路径 `/favicon.ico` 均可直接访问该图标。
 
 自检失败时返回 `500` 和对应英文提示：
 

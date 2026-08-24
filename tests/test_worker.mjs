@@ -56,7 +56,26 @@ test("root reports deployment configuration", async () => {
     ACCESS_KEYS: "{}",
   });
   assert.equal(response.status, 200);
-  assert.equal(await response.text(), "R2Gate is running successfully.");
+  assert.match(response.headers.get("content-type"), /^text\/html/);
+  const body = await response.text();
+  assert.match(body, /R2Gate is running successfully\./);
+  assert.match(body, /href="https:\/\/github\.com\/Fiatnorm\/R2Gate"/);
+  assert.match(body, /href="\/favicon\.svg"/);
+});
+
+
+test("favicon is available without R2 configuration", async () => {
+  let response = await worker.fetch(new Request("https://example.com/favicon.svg"), {});
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type"), /^image\/svg\+xml/);
+  assert.match(await response.text(), /^<svg[\s\S]*<\/svg>$/);
+
+  response = await worker.fetch(
+    new Request("https://example.com/favicon.ico", { method: "HEAD" }),
+    {},
+  );
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "");
 });
 
 
