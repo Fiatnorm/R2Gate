@@ -6,6 +6,7 @@ R2Gate 是一个精简的 Cloudflare R2 文件读取与上传工具：
 
 - Worker / Pages 使用 R2 Binding 读取文件。
 - 每个 R2 Object Key 可以配置不同访问密钥，也可以公开访问。
+- `/_files` 查询公开文件，携带正确 UUID 时查询全部文件。
 - Python 脚本通过 R2 S3 Compatible API 创建或覆盖对象。
 - 不包含登录系统、JWT、数据库、管理后台或 Presigned URL。
 
@@ -45,7 +46,10 @@ R2Gate is running successfully.
    - Type：Plaintext / 普通文本
    - Variable name：`ACCESS_KEYS`
    - Value：`{"files/private-a.txt":"key-a","files/private-b.txt":"key-b"}`
-5. 再次部署，然后访问 Worker 提供的 `workers.dev` 链接。
+5. 再添加一个加密 Secret：
+   - Variable name：`BROWSE_UUID`
+   - Value：自行生成且不对外分享的随机 UUID
+6. 再次部署，然后访问 Worker 提供的 `workers.dev` 链接。
 
 `ACCESS_KEYS` 不使用 Secret 类型，但必须添加。将其设置为 `{}` 时，所有文件都不需要访问密钥。
 
@@ -65,8 +69,11 @@ bucket_name = "your-bucket-name"
 部署：
 
 ```powershell
+npx wrangler secret put BROWSE_UUID
 npx wrangler deploy
 ```
+
+`BROWSE_UUID` 不写入 `wrangler.toml`，由 `wrangler secret put` 单独保存。只使用公开文件查询页时可以不配置；访问带 `uuid` 的全部文件查询页时必须配置。
 
 部署后访问：
 
@@ -84,7 +91,8 @@ https://your-worker.your-subdomain.workers.dev/
    - Variable name：`BUCKET`
    - R2 bucket：选择实际 Bucket
 4. 进入 **Settings > Variables and Secrets**，添加普通文本变量 `ACCESS_KEYS`。
-5. 为 Production 和需要使用的 Preview 环境配置相同绑定，然后重新部署。
+5. 在同一位置添加加密 Secret `BROWSE_UUID`，值为自行生成且不对外分享的随机 UUID。
+6. 为 Production 和需要使用的 Preview 环境配置相同绑定，然后重新部署。
 
 Pages 根路径返回相同的成功消息，文件访问规则也与 Worker 完全一致。
 
@@ -108,7 +116,8 @@ Pages 根路径返回相同的成功消息，文件访问规则也与 Worker 完
 7. 进入 **Settings > Variables and Secrets**，添加普通文本变量：
    - Variable name：`ACCESS_KEYS`
    - Value：私有文件使用 JSON 映射；全部公开时填写 `{}`
-8. 为 Production 和需要使用的 Preview 环境配置相同内容，然后重新部署。
+8. 添加加密 Secret `BROWSE_UUID`，值为自行生成且不对外分享的随机 UUID。
+9. 为 Production 和需要使用的 Preview 环境配置相同内容，然后重新部署。
 
 Git 集成项目会在 Fork 仓库的 `main` 分支有新提交时自动部署。Cloudflare Pages 的 Git 集成项目与 Direct Upload 项目是两种不同的项目类型，应在创建项目时选择需要的方式。
 
@@ -134,6 +143,33 @@ https://example.com/files/public.txt
 - Object Key 未配置密钥：直接读取。
 - 文件不存在：返回 `404 Not Found`。
 - 仅支持 `GET` 和 `HEAD`，其他方法返回 `405 Method Not Allowed`。
+
+## 文件查询页面
+
+只查询不需要访问密钥的公开文件：
+
+```text
+https://example.com/_files
+```
+
+查询全部公开和受保护文件：
+
+```text
+https://example.com/_files?uuid=your-browse-uuid
+```
+
+规则：
+
+- `BROWSE_UUID` 必须作为 Cloudflare 加密 Secret 配置；查询参数 `uuid` 与它完全一致时才显示全部文件。
+- 缺少 `uuid` 时只显示 `ACCESS_KEYS` 中没有非空密钥的对象，不要求配置 `BROWSE_UUID`。
+- 携带错误、空白或重复的 `uuid` 返回 `403 Forbidden`，且不会发起 R2 列表请求。
+- 页面每次通过一次 `BUCKET.list()` 最多读取 200 个对象；Bucket 较大时使用 R2 cursor 打开下一页。
+- 全部文件查询的后续页使用由 `BROWSE_UUID` 对 cursor 生成的 HMAC-SHA-256 分页令牌，下一页 HTML 和网址不会重复包含 UUID；令牌只对对应 cursor 有效。
+- 页面中的文件链接使用 `/_files?object=<Object Key>`；受保护文件自动增加经过 URL 编码的 `key` 参数，点击后沿用现有文件鉴权规则。
+- 查询页面不显示 UUID 或访问密钥文本，但受保护文件的完整链接本身包含对应密钥，可以在浏览器开发者工具中查看。
+- 查询页面设置 `no-store`、`no-referrer`、`noindex`、CSP 和禁止嵌入响应头，文件名经过 HTML 转义，Object Key 和访问密钥经过 URL 编码。
+- 受保护文件响应会覆盖为 `private, no-store` 并设置 `no-referrer`，避免带 key 的内容地址被缓存或作为 Referer 发送。
+- `/_files` 页面只查询和读取对象，不提供上传、覆盖或删除功能。
 
 ## Python 上传脚本
 
@@ -189,12 +225,14 @@ Copy-Item .\config.example.json .\config.json
 - 不要把 `R2_SECRET_ACCESS_KEY` 放入 Worker、Pages、URL 或前端代码。
 - R2 Bucket 应保持非公开，避免通过 `r2.dev` 或 Bucket 自定义域名绕过 Worker。
 - `ACCESS_KEYS` 是普通文本访问密码映射，可能出现在 Dashboard、URL、浏览器历史和访问日志中；不要复用重要密码。
+- `BROWSE_UUID` 是全部文件查询页的 Bearer 凭据，应使用随机 UUID 并作为 Secret 保存；其初始查询网址仍可能进入浏览器历史和 Worker 日志，不要分享或通过第三方页面跳转访问。
+- 更换 `BROWSE_UUID` 只能撤销全部文件查询页访问，不能撤销已经取得的单文件 key 链接；后者必须轮换对应的 `ACCESS_KEYS` 值。
 
 ## 持续集成
 
 GitHub Actions 会在 Push、Pull Request 和手动触发时运行以下只读检查：
 
-- Worker 根路径、鉴权、GET、HEAD、403、404、405 和 R2 异常分支。
+- Worker 根路径、文件查询、UUID、分页、特殊 Object Key、鉴权、GET、HEAD、403、404、405 和 R2 异常分支。
 - Python CREATE/UPDATE、`Content-Type` 判断与未知类型回退。
 - Worker 与 Pages 运行时代码一致性。
 - Python 依赖、JSON 和 TOML 配置格式。
