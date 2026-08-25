@@ -23,19 +23,141 @@ const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"
   </g>
 </svg>`;
 
-const FILES_HEADERS = {
-  "cache-control": "private, no-store",
+const PAGE_HEADERS = {
   "content-security-policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
   "content-type": "text/html; charset=utf-8",
   "referrer-policy": "no-referrer",
   "x-content-type-options": "nosniff",
   "x-frame-options": "DENY",
+};
+const FILES_HEADERS = {
+  ...PAGE_HEADERS,
+  "cache-control": "private, no-store",
   "x-robots-tag": "noindex, nofollow, noarchive",
 };
 const FILES_ERROR_HEADERS = {
   ...FILES_HEADERS,
   "content-type": "text/plain; charset=utf-8",
 };
+
+const APP_STYLES = `
+    :root {
+      color-scheme: dark;
+      font-family: "Roboto Flex", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      --surface: #121218;
+      --surface-container-low: #191920;
+      --surface-container: #202029;
+      --surface-container-high: #292832;
+      --surface-container-highest: #34323f;
+      --on-surface: #e7e1ec;
+      --on-surface-variant: #c9c3d0;
+      --outline: #938f9c;
+      --outline-variant: #494652;
+      --primary: #cbc2ff;
+      --on-primary: #332662;
+      --primary-container: #4c3f78;
+      --on-primary-container: #e7deff;
+      --success: #a9efca;
+      --success-container: #143c2c;
+      --warning: #f4d06f;
+      --warning-container: #4d4112;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--surface); }
+    body { min-width: 320px; min-height: 100vh; margin: 0; overflow-x: hidden; background: var(--surface); color: var(--on-surface); font-size: 16px; line-height: 1.5; text-rendering: optimizeLegibility; }
+    a { color: inherit; }
+    .skip-link { position: fixed; z-index: 30; top: 10px; left: 12px; min-height: 44px; padding: 10px 16px; border-radius: 999px; background: var(--on-surface); color: var(--surface); font-weight: 700; transform: translateY(-160%); transition: transform 160ms ease; }
+    .skip-link:focus { transform: translateY(0); }
+    .topbar { position: fixed; z-index: 20; inset: 0 0 auto 0; display: flex; align-items: center; justify-content: space-between; height: 72px; padding: 0 24px 0 18px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-low); }
+    .brand-lockup { display: inline-flex; align-items: center; gap: 12px; min-height: 48px; color: var(--on-surface); text-decoration: none; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+    .brand-icon { width: 44px; height: 44px; flex: 0 0 auto; }
+    .top-meta { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: 999px; background: var(--surface-container-highest); color: var(--on-surface-variant); font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+    .nav-rail { position: fixed; z-index: 15; inset: 72px auto 0 0; width: 88px; padding: 16px 8px; border-right: 1px solid var(--outline-variant); background: var(--surface-container-low); }
+    .nav-rail nav { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 64px; min-height: 64px; padding: 7px 4px; border-radius: 22px; color: var(--on-surface-variant); text-decoration: none; font-size: 11px; font-weight: 700; transition: background-color 160ms ease, color 160ms ease, transform 160ms ease; }
+    .nav-item svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-item:hover { background: var(--surface-container-high); color: var(--on-surface); }
+    .nav-item:active { transform: scale(.97); }
+    .nav-item.active { background: var(--primary-container); color: var(--on-primary-container); }
+    .nav-item.github { margin-top: auto; }
+    .page-shell { min-height: 100vh; margin-left: 88px; padding-top: 72px; }
+    .page-content { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 48px 0 64px; }
+    .page-header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+    .eyebrow { margin: 0 0 8px; color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(38px, 5vw, 58px); font-weight: 520; letter-spacing: -.035em; line-height: 1.05; text-wrap: balance; }
+    .scope-chip { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: 999px; background: var(--primary-container); color: var(--on-primary-container); font-size: 13px; font-weight: 750; white-space: nowrap; }
+    .status-view { display: grid; align-content: center; min-height: calc(100vh - 184px); }
+    .status-view .page-header { margin-bottom: 28px; }
+    .status-card { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 22px; min-height: 144px; padding: 28px 32px; border: 1px solid #315544; border-radius: 28px; background: var(--success-container); }
+    .status-check { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 22px; background: var(--success); color: #063824; }
+    .status-check svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    .status-message { margin: 0; color: #d6f6e4; font-size: clamp(19px, 2.2vw, 25px); font-weight: 650; letter-spacing: -.015em; }
+    .ready-badge { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 1px solid #4c7b64; border-radius: 999px; color: var(--success); font-size: 12px; font-weight: 800; letter-spacing: .08em; }
+    .security-note { display: flex; align-items: center; gap: 12px; min-height: 52px; margin: 0 0 20px; padding: 12px 16px; border-radius: 16px; background: var(--warning-container); color: #ffe38a; font-size: 14px; font-weight: 650; }
+    .security-note svg { width: 21px; height: 21px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .file-list { overflow: hidden; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); }
+    .file-list-head, .file-row { display: grid; grid-template-columns: 42px minmax(240px, 1fr) 124px 106px 132px 42px; align-items: center; gap: 12px; }
+    .file-list-head { min-height: 48px; padding: 0 20px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-high); color: var(--primary); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .file-list ul { margin: 0; padding: 0; list-style: none; }
+    .file-list li + li { border-top: 1px solid var(--outline-variant); }
+    .file-row { min-height: 76px; padding: 10px 20px; color: var(--on-surface); text-decoration: none; transition: background-color 160ms ease; }
+    .file-row:hover { background: var(--surface-container-high); }
+    .file-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--surface-container-highest); color: var(--on-surface-variant); }
+    .file-icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .object-cell { min-width: 0; }
+    .object-name { display: block; overflow-wrap: anywhere; font-weight: 680; letter-spacing: -.01em; }
+    .object-meta { display: none; margin-top: 3px; color: var(--on-surface-variant); font-size: 12px; }
+    .access-badge { display: inline-flex; align-items: center; justify-content: center; justify-self: start; min-height: 32px; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 750; }
+    .access-badge.public { background: #123f2b; color: #94f2bd; }
+    .access-badge.protected { background: #54470f; color: #ffe37d; }
+    .size-cell, .date-cell { color: var(--on-surface-variant); font-size: 13px; font-variant-numeric: tabular-nums; }
+    .open-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 999px; color: var(--primary); }
+    .open-icon svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; transition: transform 160ms ease; }
+    .file-row:hover .open-icon svg { transform: translateX(3px); }
+    .empty { display: grid; place-items: center; min-height: 180px; margin: 0; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); color: var(--on-surface-variant); }
+    .pagination { display: flex; justify-content: end; margin-top: 20px; }
+    .next-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 0 22px; border-radius: 999px; background: var(--primary); color: var(--on-primary); text-decoration: none; font-size: 14px; font-weight: 760; transition: filter 160ms ease, transform 160ms ease; }
+    .next-button:hover { filter: brightness(1.06); }
+    .next-button:active { transform: scale(.98); }
+    :focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+    @media (max-width: 760px) {
+      .topbar { height: 64px; padding: 0 16px; }
+      .brand-lockup { gap: 10px; font-size: 20px; }
+      .brand-icon { width: 38px; height: 38px; }
+      .top-meta { min-height: 36px; padding: 0 12px; font-size: 12px; }
+      .nav-rail { inset: auto 0 0 0; width: auto; height: 76px; padding: 5px 8px max(5px, env(safe-area-inset-bottom)); border-top: 1px solid var(--outline-variant); border-right: 0; }
+      .nav-rail nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+      .nav-item { width: 100%; min-height: 62px; border-radius: 20px; }
+      .nav-item.github { margin-top: 0; }
+      .page-shell { margin-left: 0; padding: 64px 0 76px; }
+      .page-content { width: calc(100% - 24px); padding: 28px 0 36px; }
+      .page-header { align-items: center; gap: 12px; margin-bottom: 20px; }
+      h1 { font-size: clamp(36px, 12vw, 48px); }
+      .status-view { min-height: calc(100vh - 204px); }
+      .status-card { grid-template-columns: 52px minmax(0, 1fr); gap: 16px; min-height: 132px; padding: 22px; border-radius: 24px; }
+      .status-check { width: 52px; height: 52px; border-radius: 18px; }
+      .ready-badge { grid-column: 1 / -1; justify-self: start; }
+      .security-note { align-items: start; }
+      .file-list { border-radius: 20px; }
+      .file-list-head { display: none; }
+      .file-row { grid-template-columns: 38px minmax(0, 1fr) auto 32px; gap: 10px; min-height: 82px; padding: 12px 14px; }
+      .file-icon { width: 36px; height: 36px; }
+      .object-meta { display: block; }
+      .size-cell, .date-cell { display: none; }
+      .access-badge { min-height: 30px; padding: 0 9px; font-size: 11px; }
+      .open-icon { width: 32px; height: 44px; }
+      .pagination { margin-top: 16px; }
+      .next-button { width: 100%; }
+    }
+    @media (max-width: 420px) {
+      .top-meta { display: none; }
+      .page-header { align-items: start; flex-direction: column; }
+      .scope-chip { min-height: 36px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+`;
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -45,6 +167,44 @@ function escapeHtml(value) {
     '"': "&quot;",
     "'": "&#39;",
   })[character]);
+}
+
+function databaseIcon() {
+  return `<svg class="brand-icon" viewBox="0 0 64 64" aria-hidden="true">
+    <defs><linearGradient id="brand-orange" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse"><stop stop-color="#ff9b20"/><stop offset="1" stop-color="#ff6b00"/></linearGradient></defs>
+    <g fill="none" stroke="url(#brand-orange)" stroke-width="5" stroke-linejoin="round"><ellipse cx="32" cy="14" rx="22" ry="9"/><path d="M10 14v36c0 5 10 9 22 9s22-4 22-9V14"/><path d="M10 26c0 5 10 9 22 9s22-4 22-9"/><path d="M10 38c0 5 10 9 22 9s22-4 22-9"/></g>
+    <g fill="#ff8611"><circle cx="18" cy="26" r="2.4"/><circle cx="18" cy="38" r="2.4"/><circle cx="18" cy="50" r="2.4"/></g>
+  </svg>`;
+}
+
+function navigation(activePage) {
+  const statusItem = activePage === "status"
+    ? `<span class="nav-item active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg><span>Status</span></span>`
+    : `<a class="nav-item" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg><span>Status</span></a>`;
+  const filesItem = activePage === "files"
+    ? `<span class="nav-item active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.7 2H20v8.8A1.7 1.7 0 0 1 18.3 20H5.7A1.7 1.7 0 0 1 4 18.3Z"/><path d="M4 10h16"/></svg><span>Files</span></span>`
+    : `<a class="nav-item" href="${FILES_PATH}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.7 2H20v8.8A1.7 1.7 0 0 1 18.3 20H5.7A1.7 1.7 0 0 1 4 18.3Z"/><path d="M4 10h16"/></svg><span>Files</span></a>`;
+  return `<aside class="nav-rail" aria-label="Primary navigation"><nav>${statusItem}${filesItem}<a class="nav-item github" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h5v5"/><path d="m20 4-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg><span>GitHub</span></a></nav></aside>`;
+}
+
+function appPage({ title, activePage, topMeta = "", content }) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>${escapeHtml(title)} · R2Gate</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>${APP_STYLES}</style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="topbar"><a class="brand-lockup" href="/" aria-label="R2Gate status">${databaseIcon()}<span>R2Gate</span></a>${topMeta ? `<span class="top-meta">${escapeHtml(topMeta)}</span>` : ""}</header>
+  ${navigation(activePage)}
+  <div class="page-shell"><main class="page-content" id="main-content">${content}</main></div>
+</body>
+</html>`;
 }
 
 function timingSafeEqual(left, right) {
@@ -112,7 +272,7 @@ function formatSize(size) {
 
 function formatUploaded(uploaded) {
   const date = uploaded instanceof Date ? uploaded : new Date(uploaded);
-  return Number.isNaN(date.getTime()) ? "Unknown date" : date.toISOString();
+  return Number.isNaN(date.getTime()) ? "Unknown" : date.toISOString().slice(0, 10);
 }
 
 function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken }) {
@@ -120,11 +280,16 @@ function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken }) {
     const requiredKey = requiredKeyFor(accessKeys, object.key);
     const href = objectHref(object.key, requiredKey);
     const visibility = requiredKey ? "Protected" : "Public";
-    return `<li>
-      <a href="${escapeHtml(href)}" rel="noreferrer">${escapeHtml(object.key)}</a>
-      <span class="badge ${requiredKey ? "protected" : "public"}">${visibility}</span>
-      <small>${escapeHtml(formatSize(object.size))} · ${escapeHtml(formatUploaded(object.uploaded))}</small>
-    </li>`;
+    const size = escapeHtml(formatSize(object.size));
+    const uploaded = escapeHtml(formatUploaded(object.uploaded));
+    return `<li><a class="file-row" href="${escapeHtml(href)}" rel="noreferrer" title="${escapeHtml(object.key)}">
+      <span class="file-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4V20H7Z"/><path d="M14 3.5V8h4M10 12h5M10 15h5"/></svg></span>
+      <span class="object-cell"><span class="object-name">${escapeHtml(object.key)}</span><span class="object-meta">${size} · ${uploaded}</span></span>
+      <span class="access-badge ${requiredKey ? "protected" : "public"}">${visibility}</span>
+      <span class="size-cell">${size}</span>
+      <span class="date-cell">${uploaded}</span>
+      <span class="open-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M14 8l4 4-4 4"/></svg></span>
+    </a></li>`;
   }).join("");
 
   let nextLink = "";
@@ -132,78 +297,24 @@ function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken }) {
     const params = new URLSearchParams();
     params.set("cursor", nextCursor);
     if (showAll) params.set("token", nextToken);
-    nextLink = `<a class="next" href="${escapeHtml(`${FILES_PATH}?${params}`)}" rel="noreferrer">Next page →</a>`;
+    nextLink = `<div class="pagination"><a class="next-button" href="${escapeHtml(`${FILES_PATH}?${params}`)}" rel="noreferrer">Next page <span aria-hidden="true">→</span></a></div>`;
   }
 
   const scope = showAll ? "All files" : "Public files";
   const emptyMessage = showAll ? "No files on this page." : "No public files on this page.";
-
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${scope} · R2Gate</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <style>
-    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
-    body { min-height: 100vh; margin: 0; background: #111827; color: #f9fafb; }
-    main { width: min(60rem, calc(100% - 2rem)); margin: 0 auto; padding: 3rem 0; }
-    header { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
-    h1 { margin: 0; font-size: clamp(2rem, 7vw, 3.5rem); }
-    header a, .next { color: #ff9b20; font-weight: 650; text-underline-offset: .25em; }
-    ul { margin: 0; padding: 0; list-style: none; border: 1px solid #374151; border-radius: .75rem; overflow: hidden; }
-    li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .35rem 1rem; padding: 1rem; background: #1f2937; }
-    li + li { border-top: 1px solid #374151; }
-    li > a { min-width: 0; overflow-wrap: anywhere; color: #f9fafb; font-weight: 650; }
-    small { grid-column: 1 / -1; color: #9ca3af; }
-    .badge { align-self: start; padding: .15rem .55rem; border-radius: 999px; font-size: .75rem; font-weight: 700; }
-    .public { color: #86efac; background: #14532d; }
-    .protected { color: #fde68a; background: #713f12; }
-    .empty { padding: 2rem; border: 1px solid #374151; border-radius: .75rem; color: #d1d5db; text-align: center; }
-    .next { display: inline-block; margin-top: 1.5rem; }
-    @media (max-width: 36rem) { header { align-items: start; flex-direction: column; } }
-  </style>
-</head>
-<body>
-  <main>
-    <header>
-      <div><h1>${scope}</h1><small>Up to ${FILES_PER_PAGE} objects per page</small></div>
-      <a href="/" rel="noreferrer">R2Gate home</a>
-    </header>
-    ${rows ? `<ul>${rows}</ul>` : `<p class="empty">${emptyMessage}</p>`}
-    ${nextLink}
-  </main>
-</body>
-</html>`;
+  const note = showAll
+    ? `<p class="security-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="10" width="12" height="10" rx="2"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>Protected links contain an access key.</p>`
+    : "";
+  const content = `<header class="page-header"><div><p class="eyebrow">${showAll ? "Authorized scope" : "Public scope"}</p><h1>${scope}</h1></div><span class="scope-chip">${showAll ? "Public + Protected" : "Public"}</span></header>
+    ${note}
+    ${rows ? `<section class="file-list" aria-label="${scope}"><div class="file-list-head" aria-hidden="true"><span></span><span>Object key</span><span>Access</span><span>Size</span><span>Uploaded</span><span>Open</span></div><ul>${rows}</ul></section>` : `<p class="empty">${emptyMessage}</p>`}
+    ${nextLink}`;
+  return appPage({ title: scope, activePage: "files", topMeta: showAll ? "All access" : "Public access", content });
 }
 
 function rootPage() {
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>R2Gate</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <style>
-    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
-    body { min-height: 100vh; margin: 0; display: grid; place-items: center; background: #111827; color: #f9fafb; }
-    main { max-width: 34rem; padding: 2.5rem; text-align: center; }
-    h1 { margin: 0 0 .75rem; font-size: clamp(2rem, 8vw, 4rem); }
-    p { margin: 0 0 1.5rem; color: #d1d5db; }
-    a { color: #ff9b20; font-weight: 650; text-underline-offset: .25em; }
-    a:hover { color: #ffb552; }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>R2Gate</h1>
-    <p>${SUCCESS_MESSAGE}</p>
-    <a href="/_files">Browse public files</a> · <a href="${GITHUB_URL}">View on GitHub</a>
-  </main>
-</body>
-</html>`;
+  const content = `<section class="status-view"><header class="page-header"><div><p class="eyebrow">Service</p><h1>Status</h1></div></header><div class="status-card"><span class="status-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.5 12 3.5 3.5 7.5-8"/></svg></span><p class="status-message">${SUCCESS_MESSAGE}</p><span class="ready-badge">READY</span></div></section>`;
+  return appPage({ title: "Status", activePage: "status", content });
 }
 
 export default {
@@ -239,6 +350,10 @@ export default {
       return new Response("ACCESS_KEYS variable is not configured", { status: 500 });
     }
 
+    if (typeof env.BROWSE_UUID !== "string" || !env.BROWSE_UUID.trim()) {
+      return new Response("BROWSE_UUID variable is not configured", { status: 500 });
+    }
+
     let accessKeys;
     try {
       accessKeys = JSON.parse(env.ACCESS_KEYS);
@@ -256,7 +371,7 @@ export default {
 
     if (url.pathname === "/") {
       return new Response(isHead ? null : rootPage(), {
-        headers: { "content-type": "text/html; charset=utf-8" },
+        headers: PAGE_HEADERS,
       });
     }
 
@@ -282,12 +397,6 @@ export default {
 
       const showAll = uuidValues.length > 0 || tokenValues.length > 0;
       if (showAll) {
-        if (typeof env.BROWSE_UUID !== "string" || !env.BROWSE_UUID.trim()) {
-          return new Response("BROWSE_UUID secret is not configured", {
-            status: 500,
-            headers: FILES_ERROR_HEADERS,
-          });
-        }
         let authorized = false;
         if (uuidValues.length === 1 && tokenValues.length === 0) {
           authorized = timingSafeEqual(uuidValues[0], env.BROWSE_UUID);

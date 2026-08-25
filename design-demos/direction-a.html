@@ -1,0 +1,998 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:,">
+  <title>R2Gate — Direction A · Canonical Tonal Rail</title>
+  <!--
+    Direction A assumptions
+    - This is a static visual direction, not production Worker markup.
+    - The authenticated all-files view is shown so Public and Protected states can be compared.
+    - Protected destinations are inert in the demo; production keeps the existing key query parameter.
+    - “Next page” demonstrates the existing cursor-pagination control and is shown only for this state.
+
+    Form reasoning
+    - Narrative role: operational browse surface with status confirmation, not a dashboard.
+    - Viewing distance: laptop first, compact phone second.
+    - Visual temperature: calm, precise, trustworthy.
+    - Capacity: one status band, one scope explanation, four real example Object Keys, one pager.
+    - Visual motif: a tonal access channel — rail, app bar, and one continuous file surface.
+  -->
+  <style>
+    :root {
+      --background: #111117;
+      --surface: #13131b;
+      --surface-container-low: #1a1922;
+      --surface-container: #201f2a;
+      --surface-container-high: #2a2835;
+      --surface-container-highest: #353240;
+      --on-surface: #e7e1ee;
+      --on-surface-variant: #c9c3d0;
+      --outline: #938e9b;
+      --outline-variant: #494650;
+      --primary: #c8bfff;
+      --on-primary: #30275f;
+      --primary-container: #493f78;
+      --on-primary-container: #e6deff;
+      --secondary-container: #454157;
+      --on-secondary-container: #e5dff5;
+      --tertiary-container: #4b3a48;
+      --on-tertiary-container: #f3dbe9;
+      --success-container: #243b31;
+      --on-success-container: #b9f2d0;
+      --scrim: #000000;
+      --rail-width: 80px;
+      --top-bar-height: 72px;
+      --ease-standard: cubic-bezier(.2, 0, 0, 1);
+    }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+    html {
+      min-width: 320px;
+      background: var(--background);
+      scroll-behavior: smooth;
+    }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: var(--on-surface);
+      background: var(--background);
+      font-family: "Roboto Flex", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a,
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    svg {
+      display: block;
+      flex: 0 0 auto;
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 100;
+      top: 8px;
+      left: 92px;
+      min-height: 44px;
+      padding: 11px 18px;
+      border-radius: 24px;
+      color: var(--on-primary);
+      background: var(--primary);
+      font-weight: 700;
+      text-decoration: none;
+      transform: translateY(-160%);
+      transition: transform 180ms var(--ease-standard);
+    }
+
+    .skip-link:focus-visible {
+      outline: 3px solid var(--on-surface);
+      outline-offset: 2px;
+      transform: translateY(0);
+    }
+
+    .rail {
+      position: fixed;
+      z-index: 30;
+      inset: 0 auto 0 0;
+      display: flex;
+      width: var(--rail-width);
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 8px 18px;
+      border-right: 1px solid var(--outline-variant);
+      background: var(--surface-container-low);
+    }
+
+    .brand-mark,
+    .mobile-brand {
+      display: grid;
+      width: 48px;
+      height: 48px;
+      place-items: center;
+      border-radius: 16px;
+      color: var(--on-primary-container);
+      background: var(--primary-container);
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+
+    .rail-nav {
+      display: grid;
+      width: 100%;
+      gap: 12px;
+      margin-top: 38px;
+    }
+
+    .rail-link {
+      position: relative;
+      display: grid;
+      width: 64px;
+      min-height: 56px;
+      place-items: center;
+      gap: 4px;
+      padding: 6px 4px;
+      border-radius: 20px;
+      color: var(--on-surface-variant);
+      text-decoration: none;
+      transition: color 160ms var(--ease-standard), background-color 160ms var(--ease-standard), transform 160ms var(--ease-standard);
+    }
+
+    .rail-link::before {
+      position: absolute;
+      inset: 8px 9px auto;
+      z-index: -1;
+      height: 32px;
+      border-radius: 18px;
+      background: transparent;
+      content: "";
+      transition: background-color 160ms var(--ease-standard);
+    }
+
+    .rail-link:hover {
+      color: var(--on-surface);
+      background: rgba(231, 225, 238, .06);
+    }
+
+    .rail-link:active {
+      transform: scale(.96);
+    }
+
+    .rail-link[aria-current="page"] {
+      color: var(--on-primary-container);
+    }
+
+    .rail-link[aria-current="page"]::before {
+      background: var(--primary-container);
+    }
+
+    .rail-link:focus-visible,
+    .file-link:focus-visible,
+    .next-button:focus-visible {
+      outline: 3px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    .rail-icon {
+      position: relative;
+      z-index: 1;
+      width: 22px;
+      height: 22px;
+    }
+
+    .rail-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    .rail-foot {
+      margin-top: auto;
+      color: var(--outline);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+    }
+
+    .top-app-bar {
+      position: fixed;
+      z-index: 20;
+      inset: 0 0 auto var(--rail-width);
+      display: flex;
+      height: var(--top-bar-height);
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 clamp(20px, 3vw, 44px);
+      border-bottom: 1px solid var(--outline-variant);
+      background: var(--surface);
+    }
+
+    .mobile-brand {
+      display: none;
+    }
+
+    .app-identity {
+      min-width: 0;
+    }
+
+    .app-name {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 570;
+      line-height: 1.2;
+      letter-spacing: -.01em;
+    }
+
+    .app-context {
+      margin: 2px 0 0;
+      color: var(--on-surface-variant);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+
+    .scope-indicator {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border: 1px solid var(--outline-variant);
+      border-radius: 20px;
+      color: var(--on-secondary-container);
+      background: var(--secondary-container);
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .scope-indicator svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .page {
+      min-height: 100vh;
+      margin-left: var(--rail-width);
+      padding: calc(var(--top-bar-height) + clamp(24px, 4vw, 56px)) clamp(20px, 4vw, 64px) 64px;
+    }
+
+    .workspace {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+    }
+
+    .status-band {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 18px;
+      min-height: 80px;
+      margin-bottom: 20px;
+      padding: 16px 24px;
+      border-radius: 24px;
+      color: var(--on-success-container);
+      background: var(--success-container);
+    }
+
+    .status-icon {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border-radius: 50%;
+      color: #173526;
+      background: var(--on-success-container);
+    }
+
+    .status-icon svg {
+      width: 23px;
+      height: 23px;
+    }
+
+    .status-copy {
+      min-width: 0;
+    }
+
+    .status-eyebrow {
+      margin: 0 0 2px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .status-message {
+      margin: 0;
+      color: #ddf9e7;
+      font-size: clamp(16px, 1.4vw, 18px);
+      font-weight: 580;
+      text-wrap: pretty;
+    }
+
+    .status-tag {
+      padding: 7px 12px;
+      border: 1px solid rgba(185, 242, 208, .28);
+      border-radius: 999px;
+      color: var(--on-success-container);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .files-surface {
+      overflow: hidden;
+      border: 1px solid var(--outline-variant);
+      border-radius: 28px;
+      background: var(--surface-container);
+    }
+
+    .surface-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      gap: 28px;
+      padding: clamp(26px, 4vw, 48px);
+      padding-bottom: 30px;
+      background: var(--surface-container-high);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--on-surface);
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 520;
+      line-height: 1.06;
+      letter-spacing: -.035em;
+      text-wrap: balance;
+    }
+
+    .intro {
+      max-width: 680px;
+      margin: 16px 0 0;
+      color: var(--on-surface-variant);
+      font-size: 16px;
+      text-wrap: pretty;
+    }
+
+    .scope-seal {
+      display: grid;
+      min-width: 156px;
+      gap: 4px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      color: var(--on-primary-container);
+      background: var(--primary-container);
+    }
+
+    .scope-seal-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+
+    .scope-seal-value {
+      font-size: 18px;
+      font-weight: 650;
+    }
+
+    .privacy-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 18px clamp(24px, 4vw, 48px);
+      border-bottom: 1px solid var(--outline-variant);
+      color: var(--on-tertiary-container);
+      background: var(--tertiary-container);
+      font-size: 14px;
+      text-wrap: pretty;
+    }
+
+    .privacy-note svg {
+      width: 20px;
+      height: 20px;
+      margin-top: 1px;
+    }
+
+    .list-heading {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) 148px 44px;
+      gap: 16px;
+      padding: 18px clamp(20px, 4vw, 40px) 12px;
+      color: var(--on-surface-variant);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .list-heading span:first-child {
+      grid-column: 2;
+    }
+
+    .file-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .file-list li {
+      border-top: 1px solid var(--outline-variant);
+    }
+
+    .file-link {
+      position: relative;
+      display: grid;
+      min-height: 82px;
+      grid-template-columns: 48px minmax(0, 1fr) 148px 44px;
+      align-items: center;
+      gap: 16px;
+      padding: 14px clamp(20px, 4vw, 40px);
+      color: var(--on-surface);
+      text-decoration: none;
+      transition: background-color 160ms var(--ease-standard), transform 160ms var(--ease-standard);
+    }
+
+    .file-link:hover {
+      background: rgba(231, 225, 238, .075);
+    }
+
+    .file-link:active {
+      background: rgba(200, 191, 255, .12);
+      transform: translateX(2px);
+    }
+
+    .file-icon {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border-radius: 14px;
+      color: var(--primary);
+      background: var(--surface-container-highest);
+    }
+
+    .file-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .file-copy {
+      min-width: 0;
+    }
+
+    .file-name {
+      display: block;
+      overflow-wrap: anywhere;
+      font-size: 16px;
+      font-weight: 620;
+      line-height: 1.35;
+      letter-spacing: .005em;
+    }
+
+    .file-kind {
+      display: block;
+      margin-top: 4px;
+      color: var(--on-surface-variant);
+      font-size: 13px;
+    }
+
+    .access-badge {
+      display: inline-flex;
+      width: max-content;
+      max-width: 100%;
+      min-height: 32px;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 11px;
+      border-radius: 16px;
+      color: var(--on-secondary-container);
+      background: var(--secondary-container);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+
+    .access-badge.protected {
+      color: var(--on-primary-container);
+      background: var(--primary-container);
+    }
+
+    .access-badge svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .file-copy > .access-badge {
+      display: none;
+    }
+
+    .chevron {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--on-surface-variant);
+      transition: color 160ms var(--ease-standard), background-color 160ms var(--ease-standard), transform 160ms var(--ease-standard);
+    }
+
+    .chevron svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .file-link:hover .chevron {
+      color: var(--on-primary-container);
+      background: var(--primary-container);
+      transform: translateX(2px);
+    }
+
+    .surface-foot {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 22px clamp(20px, 4vw, 40px) 26px;
+      border-top: 1px solid var(--outline-variant);
+      background: var(--surface-container-high);
+    }
+
+    .next-button {
+      display: inline-flex;
+      min-width: 132px;
+      min-height: 48px;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 11px 20px;
+      border-radius: 24px;
+      color: var(--on-primary);
+      background: var(--primary);
+      font-size: 14px;
+      font-weight: 800;
+      text-decoration: none;
+      transition: box-shadow 160ms var(--ease-standard), filter 160ms var(--ease-standard), transform 160ms var(--ease-standard);
+    }
+
+    .next-button:hover {
+      filter: brightness(1.06);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .34);
+    }
+
+    .next-button:active {
+      box-shadow: none;
+      transform: scale(.97);
+    }
+
+    .next-button svg {
+      width: 19px;
+      height: 19px;
+    }
+
+    @media (max-width: 760px) {
+      :root {
+        --top-bar-height: 64px;
+      }
+
+      .skip-link {
+        left: 12px;
+      }
+
+      .rail {
+        inset: auto 0 0;
+        width: 100%;
+        height: 76px;
+        flex-direction: row;
+        justify-content: center;
+        padding: 6px max(16px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+        border-top: 1px solid var(--outline-variant);
+        border-right: 0;
+        background: var(--surface-container-high);
+      }
+
+      .rail > .brand-mark,
+      .rail-foot {
+        display: none;
+      }
+
+      .rail-nav {
+        display: grid;
+        width: min(300px, 100%);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin: 0;
+      }
+
+      .rail-link {
+        width: 100%;
+        min-height: 58px;
+        grid-template-columns: auto auto;
+        justify-content: center;
+        align-content: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border-radius: 18px;
+      }
+
+      .rail-link::before {
+        inset: 7px 8px;
+        height: auto;
+        border-radius: 18px;
+      }
+
+      .rail-label {
+        position: relative;
+        z-index: 1;
+        font-size: 12px;
+      }
+
+      .top-app-bar {
+        left: 0;
+        gap: 12px;
+        padding: 0 16px;
+      }
+
+      .mobile-brand {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        flex: 0 0 auto;
+        border-radius: 13px;
+        font-size: 13px;
+      }
+
+      .app-identity {
+        margin-right: auto;
+      }
+
+      .app-name {
+        font-size: 18px;
+      }
+
+      .app-context {
+        display: none;
+      }
+
+      .scope-indicator {
+        min-height: 36px;
+        padding: 7px 10px;
+        font-size: 12px;
+      }
+
+      .scope-indicator svg {
+        display: none;
+      }
+
+      .page {
+        margin-left: 0;
+        padding: calc(var(--top-bar-height) + 16px) 12px calc(96px + env(safe-area-inset-bottom));
+      }
+
+      .status-band {
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 13px;
+        margin-bottom: 12px;
+        padding: 14px 16px;
+        border-radius: 20px;
+      }
+
+      .status-icon {
+        width: 40px;
+        height: 40px;
+      }
+
+      .status-message {
+        font-size: 14px;
+      }
+
+      .status-tag {
+        display: none;
+      }
+
+      .files-surface {
+        border-radius: 24px;
+      }
+
+      .surface-head {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 26px 20px 22px;
+      }
+
+      h1 {
+        font-size: 38px;
+      }
+
+      .intro {
+        margin-top: 12px;
+        font-size: 15px;
+      }
+
+      .scope-seal {
+        min-width: 0;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+      }
+
+      .scope-seal-value {
+        justify-self: end;
+        font-size: 15px;
+      }
+
+      .privacy-note {
+        padding: 16px 20px;
+      }
+
+      .list-heading {
+        grid-template-columns: 1fr;
+        padding: 17px 20px 10px;
+      }
+
+      .list-heading span:first-child {
+        grid-column: auto;
+      }
+
+      .list-heading span:not(:first-child) {
+        display: none;
+      }
+
+      .file-link {
+        min-height: 88px;
+        grid-template-columns: 44px minmax(0, 1fr) 36px;
+        gap: 12px;
+        padding: 14px 14px 14px 20px;
+      }
+
+      .file-kind {
+        display: none;
+      }
+
+      .access-badge {
+        margin-top: 7px;
+      }
+
+      .file-copy > .access-badge {
+        display: inline-flex;
+      }
+
+      .file-link > .access-badge {
+        display: none;
+      }
+
+      .chevron {
+        width: 36px;
+        height: 44px;
+      }
+
+      .surface-foot {
+        padding: 18px 20px 20px;
+      }
+
+      .next-button {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 370px) {
+      .scope-indicator {
+        display: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to files</a>
+
+  <aside class="rail" aria-label="Primary navigation">
+    <div class="brand-mark" aria-label="R2Gate">R2</div>
+    <nav class="rail-nav">
+      <a class="rail-link" href="#status">
+        <svg class="rail-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1 5h2v6h-2V7Zm0 8h2v2h-2v-2Z"/>
+        </svg>
+        <span class="rail-label">Status</span>
+      </a>
+      <a class="rail-link" href="#main-content" aria-current="page">
+        <svg class="rail-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M10 4H4v6h6V4Zm0 10H4v6h6v-6Zm10-10h-6v6h6V4Zm0 10h-6v6h6v-6Z"/>
+        </svg>
+        <span class="rail-label">Files</span>
+      </a>
+    </nav>
+    <div class="rail-foot" aria-hidden="true">R2GATE</div>
+  </aside>
+
+  <header class="top-app-bar">
+    <div class="mobile-brand" aria-hidden="true">R2</div>
+    <div class="app-identity">
+      <p class="app-name">R2Gate</p>
+      <p class="app-context">Secure object delivery</p>
+    </div>
+    <div class="scope-indicator" aria-label="Current view: all files">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V6Z"/>
+      </svg>
+      All access
+    </div>
+  </header>
+
+  <main class="page" id="main-content">
+    <div class="workspace">
+      <section class="status-band" id="status" aria-labelledby="status-title">
+        <div class="status-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path fill="currentColor" d="m9.1 16.2-4.3-4.3 1.4-1.4 2.9 2.9 8.7-8.7 1.4 1.4-10.1 10.1Z"/>
+          </svg>
+        </div>
+        <div class="status-copy">
+          <p class="status-eyebrow" id="status-title">Service ready</p>
+          <p class="status-message">R2Gate is running successfully.</p>
+        </div>
+        <span class="status-tag">Ready</span>
+      </section>
+
+      <section class="files-surface" aria-labelledby="files-title">
+        <header class="surface-head">
+          <div>
+            <p class="eyebrow">Authenticated scope</p>
+            <h1 id="files-title">All files</h1>
+            <p class="intro">Browse public objects and files available through your protected access. Object Keys are shown exactly as stored.</p>
+          </div>
+          <div class="scope-seal" aria-label="Access scope: public and protected">
+            <span class="scope-seal-label">Access scope</span>
+            <span class="scope-seal-value">Public + Protected</span>
+          </div>
+        </header>
+
+        <aside class="privacy-note" aria-label="Protected link notice">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M12 2 3.5 5.8v5.7c0 5.2 3.6 9.7 8.5 10.8 4.9-1.1 8.5-5.6 8.5-10.8V5.8L12 2Zm0 2.2 6.5 2.9v4.4c0 4.1-2.7 7.6-6.5 8.7-3.8-1.1-6.5-4.6-6.5-8.7V7.1L12 4.2Zm-1 4.3h2v5h-2v-5Zm0 6.5h2v2h-2v-2Z"/>
+          </svg>
+          <span>Protected links include an access key. Open them only on trusted devices and avoid forwarding them.</span>
+        </aside>
+
+        <div class="list-heading" aria-hidden="true">
+          <span>Object Key</span>
+          <span>Access</span>
+          <span></span>
+        </div>
+
+        <ul class="file-list" aria-label="Objects">
+          <li>
+            <a class="file-link" href="/_files?object=public.txt" title="public.txt">
+              <span class="file-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm1 7V5.5L18.5 9H15ZM8 13h8v2H8v-2Zm0 4h6v2H8v-2Z"/>
+                </svg>
+              </span>
+              <span class="file-copy">
+                <span class="file-name">public.txt</span>
+                <span class="file-kind">Text document</span>
+                <span class="access-badge">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 8h-7V6a2 2 0 1 1 4 0h2a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9h14v-9a2 2 0 0 0-2-2Z"/></svg>
+                  Public
+                </span>
+              </span>
+              <span class="access-badge">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 8h-7V6a2 2 0 1 1 4 0h2a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9h14v-9a2 2 0 0 0-2-2Z"/></svg>
+                Public
+              </span>
+              <span class="chevron" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="m9.3 18.3 6.3-6.3-6.3-6.3 1.4-1.4 7.7 7.7-7.7 7.7-1.4-1.4Z"/></svg>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a class="file-link" href="/_files?object=docs%2Fguide.pdf" title="docs/guide.pdf">
+              <span class="file-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm1 7V5.5L18.5 9H15ZM7.5 13h2.2a2.3 2.3 0 0 1 0 4.6H9V20H7.5v-7Zm1.5 1.4v1.8h.6a.9.9 0 1 0 0-1.8H9Zm4-1.4h2.1c1.8 0 3 1.3 3 3.5s-1.2 3.5-3 3.5H13v-7Zm1.5 1.4v4.2h.5c1 0 1.6-.7 1.6-2.1 0-1.4-.6-2.1-1.6-2.1h-.5Z"/></svg>
+              </span>
+              <span class="file-copy">
+                <span class="file-name">docs/guide.pdf</span>
+                <span class="file-kind">PDF document</span>
+                <span class="access-badge">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 8h-7V6a2 2 0 1 1 4 0h2a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9h14v-9a2 2 0 0 0-2-2Z"/></svg>
+                  Public
+                </span>
+              </span>
+              <span class="access-badge">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 8h-7V6a2 2 0 1 1 4 0h2a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9h14v-9a2 2 0 0 0-2-2Z"/></svg>
+                Public
+              </span>
+              <span class="chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="m9.3 18.3 6.3-6.3-6.3-6.3 1.4-1.4 7.7 7.7-7.7 7.7-1.4-1.4Z"/></svg></span>
+            </a>
+          </li>
+          <li>
+            <a class="file-link" href="/_files?object=private.txt&amp;key=existing-access-key" title="private.txt — protected link keeps its existing key parameter">
+              <span class="file-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm1 7V5.5L18.5 9H15ZM8 13h8v2H8v-2Zm0 4h6v2H8v-2Z"/></svg>
+              </span>
+              <span class="file-copy">
+                <span class="file-name">private.txt</span>
+                <span class="file-kind">Text document</span>
+                <span class="access-badge protected">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9h14v-9a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V6Z"/></svg>
+                  Protected
+                </span>
+              </span>
+              <span class="access-badge protected">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9h14v-9a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V6Z"/></svg>
+                Protected
+              </span>
+              <span class="chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="m9.3 18.3 6.3-6.3-6.3-6.3 1.4-1.4 7.7 7.7-7.7 7.7-1.4-1.4Z"/></svg></span>
+            </a>
+          </li>
+          <li>
+            <a class="file-link" href="/_files?object=%E7%9B%AE%E5%BD%95%2F%E6%B5%8B%E8%AF%95%E6%96%87%E4%BB%B6.txt&amp;key=existing-access-key" title="目录/测试文件.txt — protected link keeps its existing key parameter">
+              <span class="file-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Zm10 14H4V8h16v10Z"/></svg>
+              </span>
+              <span class="file-copy">
+                <span class="file-name">目录/测试文件.txt</span>
+                <span class="file-kind">Text document</span>
+                <span class="access-badge protected">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9h14v-9a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V6Z"/></svg>
+                  Protected
+                </span>
+              </span>
+              <span class="access-badge protected">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9h14v-9a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V6Z"/></svg>
+                Protected
+              </span>
+              <span class="chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="m9.3 18.3 6.3-6.3-6.3-6.3 1.4-1.4 7.7 7.7-7.7 7.7-1.4-1.4Z"/></svg></span>
+            </a>
+          </li>
+        </ul>
+
+        <footer class="surface-foot">
+          <a class="next-button" href="/_files?cursor=next-page&amp;token=demo-token" aria-label="Next page of files">
+            Next page
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m9.3 18.3 6.3-6.3-6.3-6.3 1.4-1.4 7.7 7.7-7.7 7.7-1.4-1.4Z"/></svg>
+          </a>
+        </footer>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

@@ -6,18 +6,19 @@
 - 不增加 JWT、登录、数据库、KV、D1、后台、Presigned URL、角色或多用户系统。
 - Worker 的 R2 Binding 名称固定为 `BUCKET`。
 - `ACCESS_KEYS` 使用普通文本变量，值为 Object Key 到访问密钥的 JSON 映射。
-- `BROWSE_UUID` 使用 Cloudflare Secret，只作为全部文件查询页的 Bearer 凭据。
+- `BROWSE_UUID` 使用必填的普通文本变量，只作为全部文件查询页的 Bearer 凭据。
 
 ## 运行时代码
 
 - `worker.mjs` 是 Worker 入口。
 - `pages-dist/_worker.js` 是 Pages Direct Upload 入口。
 - 修改运行时行为时必须同步这两个文件，并验证内容完全一致。
-- 根路径必须先验证 `BUCKET` Binding 和 `ACCESS_KEYS` 普通文本变量；两者有效时才返回英文 `R2Gate is running successfully.`。
+- 根路径必须先验证 `BUCKET` Binding、`ACCESS_KEYS` 和 `BROWSE_UUID` 普通文本变量；三者有效时才返回英文 `R2Gate is running successfully.`。
 - `/_files` 只列出不需要密钥的对象；`/_files?uuid=<UUID>` 验证 `BROWSE_UUID` 后列出全部对象，并为受保护对象生成携带现有 `key` 参数的链接。
 - 文件查询必须使用 R2 cursor 分页，每次 `BUCKET.list()` 最多读取 200 个对象；不得按文件额外调用 `get()` 或 `head()` 获取列表元数据。
 - 全部文件查询的后续页必须使用 `BROWSE_UUID` 签发的 cursor 专用 HMAC 令牌，不得在分页链接中重复 UUID。
 - 查询页不得缓存或向 Referer 泄露 UUID；Object Key 必须进行 HTML 转义和 URL 编码，不得把 UUID 显示在页面正文中。
+- `/` Status 与 `/_files` Files 必须保持为两个独立页面，共用 Material Design 3 深色样式、橙色数据库图标和 Status / Files / GitHub 左侧导航；Files 使用紧凑列表，不在页面之间混入对方的主体内容。
 - Pages 上传只能使用 `pages-dist`，不得上传仓库根目录。
 
 ## Python
@@ -42,4 +43,4 @@
 - Python 测试：`.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py" -v`
 - 配置示例：使用 Python `json` 模块解析 `config.example.json`
 - Pages 一致性：比较 `worker.mjs` 与 `pages-dist/_worker.js`
-- 行为验证至少覆盖根路径成功、缺少 Binding、缺少或无效 `ACCESS_KEYS`、公开/全部文件查询、UUID、分页、特殊 Object Key、GET、HEAD、403、404、405 和 R2 异常。
+- 行为验证至少覆盖根路径成功、缺少 Binding、缺少或无效 `ACCESS_KEYS`、缺少 `BROWSE_UUID`、公开/全部文件查询、UUID、分页、特殊 Object Key、GET、HEAD、403、404、405 和 R2 异常。

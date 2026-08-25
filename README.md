@@ -19,18 +19,19 @@ R2Gate 是一个精简的 Cloudflare R2 文件读取与上传工具：
 - `config.example.json`：不含真实密钥的上传配置示例。
 - `config.json`：本地真实上传配置，已被 Git 忽略。
 
-访问 Worker 或 Pages 的根路径时，程序会先检查 `BUCKET` Binding 和 `ACCESS_KEYS` 普通文本变量。两项配置有效后才返回包含以下英文状态信息和 GitHub 项目链接的 HTML 页面：
+访问 Worker 或 Pages 的根路径时，程序会先检查 `BUCKET` Binding，以及 `ACCESS_KEYS` 和 `BROWSE_UUID` 这两个普通文本变量。三项配置有效后才返回独立的 Material Design 3 深色 Status 页面，其中显示以下英文状态信息：
 
 ```text
 R2Gate is running successfully.
 ```
 
-页面使用内置的透明 SVG 数据库图标作为浏览器 favicon；`/favicon.svg` 与兼容路径 `/favicon.ico` 均可直接访问该图标。
+Status 与 Files 使用统一的 Material Design 3 深色布局；左侧导航可在两个独立页面之间切换，并提供 GitHub 项目入口。页面使用根据项目图标制作的轻量橙色数据库 SVG 作为品牌图标和浏览器 favicon；`/favicon.svg` 与兼容路径 `/favicon.ico` 均可直接访问该图标。
 
 自检失败时返回 `500` 和对应英文提示：
 
 - 未正确添加 R2 Binding：`R2 bucket binding is not configured`
 - 未添加或留空 `ACCESS_KEYS`：`ACCESS_KEYS variable is not configured`
+- 未添加或留空 `BROWSE_UUID`：`BROWSE_UUID variable is not configured`
 - `ACCESS_KEYS` 不是有效 JSON 对象：`Invalid ACCESS_KEYS configuration`
 
 ## Worker 部署
@@ -46,7 +47,8 @@ R2Gate is running successfully.
    - Type：Plaintext / 普通文本
    - Variable name：`ACCESS_KEYS`
    - Value：`{"files/private-a.txt":"key-a","files/private-b.txt":"key-b"}`
-5. 再添加一个加密 Secret：
+5. 再添加一个普通文本变量：
+   - Type：Plaintext / 普通文本
    - Variable name：`BROWSE_UUID`
    - Value：自行生成且不对外分享的随机 UUID
 6. 再次部署，然后访问 Worker 提供的 `workers.dev` 链接。
@@ -60,20 +62,20 @@ R2Gate is running successfully.
 ```toml
 [vars]
 ACCESS_KEYS = "{\"files/private-a.txt\":\"key-a\"}"
+BROWSE_UUID = "your-random-uuid"
 
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "your-bucket-name"
 ```
 
-部署：
+配置完成后部署：
 
 ```powershell
-npx wrangler secret put BROWSE_UUID
 npx wrangler deploy
 ```
 
-`BROWSE_UUID` 不写入 `wrangler.toml`，由 `wrangler secret put` 单独保存。只使用公开文件查询页时可以不配置；访问带 `uuid` 的全部文件查询页时必须配置。
+`ACCESS_KEYS` 和 `BROWSE_UUID` 都是必填的 Plaintext / 普通文本变量。仓库内的 `wrangler.toml` 将 `BROWSE_UUID` 留空以确保示例配置不会携带可用凭据；部署前必须替换为自行生成且不对外分享的随机 UUID，否则所有受配置检查保护的请求都会返回 `500`。
 
 部署后访问：
 
@@ -91,7 +93,7 @@ https://your-worker.your-subdomain.workers.dev/
    - Variable name：`BUCKET`
    - R2 bucket：选择实际 Bucket
 4. 进入 **Settings > Variables and Secrets**，添加普通文本变量 `ACCESS_KEYS`。
-5. 在同一位置添加加密 Secret `BROWSE_UUID`，值为自行生成且不对外分享的随机 UUID。
+5. 在同一位置添加普通文本变量 `BROWSE_UUID`，值为自行生成且不对外分享的随机 UUID。
 6. 为 Production 和需要使用的 Preview 环境配置相同绑定，然后重新部署。
 
 Pages 根路径返回相同的成功消息，文件访问规则也与 Worker 完全一致。
@@ -116,7 +118,7 @@ Pages 根路径返回相同的成功消息，文件访问规则也与 Worker 完
 7. 进入 **Settings > Variables and Secrets**，添加普通文本变量：
    - Variable name：`ACCESS_KEYS`
    - Value：私有文件使用 JSON 映射；全部公开时填写 `{}`
-8. 添加加密 Secret `BROWSE_UUID`，值为自行生成且不对外分享的随机 UUID。
+8. 添加普通文本变量 `BROWSE_UUID`，值为自行生成且不对外分享的随机 UUID。
 9. 为 Production 和需要使用的 Preview 环境配置相同内容，然后重新部署。
 
 Git 集成项目会在 Fork 仓库的 `main` 分支有新提交时自动部署。Cloudflare Pages 的 Git 集成项目与 Direct Upload 项目是两种不同的项目类型，应在创建项目时选择需要的方式。
@@ -146,6 +148,8 @@ https://example.com/files/public.txt
 
 ## 文件查询页面
 
+Files 页面使用与 Status 页面统一的 navigation rail，并采用紧凑列表分别显示 Object Key、访问状态、大小和上传日期。页面不显示 Status 内容、UUID 或访问密钥文本。
+
 只查询不需要访问密钥的公开文件：
 
 ```text
@@ -160,8 +164,8 @@ https://example.com/_files?uuid=your-browse-uuid
 
 规则：
 
-- `BROWSE_UUID` 必须作为 Cloudflare 加密 Secret 配置；查询参数 `uuid` 与它完全一致时才显示全部文件。
-- 缺少 `uuid` 时只显示 `ACCESS_KEYS` 中没有非空密钥的对象，不要求配置 `BROWSE_UUID`。
+- `BROWSE_UUID` 必须作为 Cloudflare Plaintext / 普通文本变量配置；查询参数 `uuid` 与它完全一致时才显示全部文件。
+- `BROWSE_UUID` 缺失或留空时，根路径、公开文件查询、全部文件查询和文件读取都会返回 `500`；缺少查询参数 `uuid` 时仍只显示 `ACCESS_KEYS` 中没有非空密钥的对象。
 - 携带错误、空白或重复的 `uuid` 返回 `403 Forbidden`，且不会发起 R2 列表请求。
 - 页面每次通过一次 `BUCKET.list()` 最多读取 200 个对象；Bucket 较大时使用 R2 cursor 打开下一页。
 - 全部文件查询的后续页使用由 `BROWSE_UUID` 对 cursor 生成的 HMAC-SHA-256 分页令牌，下一页 HTML 和网址不会重复包含 UUID；令牌只对对应 cursor 有效。
@@ -225,7 +229,7 @@ Copy-Item .\config.example.json .\config.json
 - 不要把 `R2_SECRET_ACCESS_KEY` 放入 Worker、Pages、URL 或前端代码。
 - R2 Bucket 应保持非公开，避免通过 `r2.dev` 或 Bucket 自定义域名绕过 Worker。
 - `ACCESS_KEYS` 是普通文本访问密码映射，可能出现在 Dashboard、URL、浏览器历史和访问日志中；不要复用重要密码。
-- `BROWSE_UUID` 是全部文件查询页的 Bearer 凭据，应使用随机 UUID 并作为 Secret 保存；其初始查询网址仍可能进入浏览器历史和 Worker 日志，不要分享或通过第三方页面跳转访问。
+- `BROWSE_UUID` 是全部文件查询页的 Bearer 凭据，应使用高熵随机 UUID 并作为普通文本变量保存；它会对拥有 Cloudflare 项目变量读取权限的人可见，其初始查询网址也可能进入浏览器历史和 Worker 日志，不要分享或通过第三方页面跳转访问。
 - 更换 `BROWSE_UUID` 只能撤销全部文件查询页访问，不能撤销已经取得的单文件 key 链接；后者必须轮换对应的 `ACCESS_KEYS` 值。
 
 ## 持续集成
