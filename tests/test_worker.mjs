@@ -369,6 +369,8 @@ test("public file listing excludes protected objects and safely links exact keys
   assert.match(body, /class="files-view"/);
   assert.match(body, /\.files-view, \.status-view \{ width: min\(960px, 100%\); margin: 0 auto; \}/);
   assert.match(body, /class="file-list"/);
+  assert.match(body, /\.file-row:has\(\.file-open:hover\) \{ background: var\(--surface-container-high\); \}/);
+  assert.doesNotMatch(body, /\.file-row:hover \{ background:/);
   assert.match(body, /<span>Object key<\/span><span>Access<\/span><span>Type<\/span><span>Size<\/span><span>Uploaded \(GMT\+8\)<\/span><\/span><span>Download<\/span>/);
   assert.match(body, /text\/plain/);
   assert.match(body, /25 Aug 2026 08:00:00/);

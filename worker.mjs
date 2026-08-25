@@ -125,7 +125,7 @@ const APP_STYLES = `
     .file-list ul { margin: 0; padding: 0; list-style: none; }
     .file-list li + li { border-top: 1px solid var(--outline-variant); }
     .file-row { min-height: 64px; padding: 0 16px; color: var(--on-surface); transition: background-color 160ms ease; }
-    .file-row:hover { background: var(--surface-container-high); }
+    .file-row:has(.file-open:hover) { background: var(--surface-container-high); }
     .file-open { align-self: stretch; min-height: 64px; padding: 8px 0; color: var(--on-surface); text-decoration: none; }
     .file-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--surface-container-highest); color: var(--on-surface-variant); }
     .file-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
