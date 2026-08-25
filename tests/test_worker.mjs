@@ -141,6 +141,8 @@ test("root reports deployment configuration", async () => {
   assert.match(body, /href="https:\/\/raw\.githubusercontent\.com\/Fiatnorm\/R2Gate\/refs\/heads\/main\/LICENSE" target="_blank" rel="noopener noreferrer"/);
   assert.match(body, /href="\/favicon\.svg"/);
   assert.match(body, /id="brand-orange"/);
+  assert.match(body, /\.files-view, \.status-view \{ width: min\(960px, 100%\); margin: 0 auto; \}/);
+  assert.match(body, /\.status-view \{ display: grid; align-content: center; min-height: calc\(100vh - 240px\); \}/);
   assert.doesNotMatch(body, /class="file-list"/);
 
   response = await worker.fetch(new Request("https://example.com/"), {
@@ -256,7 +258,7 @@ test("public file listing excludes protected objects and safely links exact keys
   const body = await response.text();
   assert.match(body, /Public files/);
   assert.match(body, /class="files-view"/);
-  assert.match(body, /\.files-view \{ width: min\(960px, 100%\); margin: 0 auto; \}/);
+  assert.match(body, /\.files-view, \.status-view \{ width: min\(960px, 100%\); margin: 0 auto; \}/);
   assert.match(body, /class="file-list"/);
   assert.match(body, /<span>Object key<\/span><span>Access<\/span><span>Type<\/span><span>Size<\/span><span>Uploaded \(GMT\+8\)<\/span>/);
   assert.match(body, /text\/plain/);

@@ -23,7 +23,7 @@ R2Gate 是一个精简的 Cloudflare R2 文件读取鉴权与上传工具：Work
 | `BROWSE_UUID` | 是 | Plaintext 高熵 Bearer 凭据，只用于查看全部文件。 |
 | `DISPLAY_TIME_ZONE` | 否 | 有效 IANA 时区；默认 `Asia/Singapore`，页面显示 `GMT+8`。 |
 
-根路径 `/` 会一次检查全部配置。全部有效时返回独立的 Material Design 3 深色 Status 页面，并显示：
+根路径 `/` 会一次检查全部配置。全部有效时返回独立的 Material Design 3 深色 Status 页面；它与 Files 使用相同的 960px 内容宽度，并在桌面视口中纵向居中。页面显示：
 
 ```text
 R2Gate is running successfully.

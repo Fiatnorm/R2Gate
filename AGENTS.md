@@ -22,7 +22,7 @@
 - 文件查询必须使用 R2 cursor 分页，每次 `BUCKET.list()` 最多读取 200 个对象；不得按文件额外调用 `get()` 或 `head()` 获取列表元数据。
 - 全部文件查询的后续页必须使用 `BROWSE_UUID` 签发的 cursor 专用 HMAC 令牌，不得在分页链接中重复 UUID。
 - 查询页不得缓存或向 Referer 泄露 UUID；Object Key 必须进行 HTML 转义和 URL 编码，不得把 UUID 显示在页面正文中。
-- `/` Status 与 `/_files` Files 必须保持为两个独立页面，共用 Material Design 3 深色样式、橙色数据库图标和 Status / Files / License / GitHub 左侧导航；License 固定指向 `https://raw.githubusercontent.com/Fiatnorm/R2Gate/refs/heads/main/LICENSE`。Files 使用 Object Key / Access / Type / Size / Uploaded 顺序的紧凑列表，不在页面之间混入对方的主体内容。
+- `/` Status 与 `/_files` Files 必须保持为两个独立页面，共用 960px 内容宽度、Material Design 3 深色样式、橙色数据库图标和 Status / Files / License / GitHub 左侧导航；Status 在桌面视口中纵向居中，License 固定指向 `https://raw.githubusercontent.com/Fiatnorm/R2Gate/refs/heads/main/LICENSE`。Files 使用 Object Key / Access / Type / Size / Uploaded 顺序的紧凑列表，不在页面之间混入对方的主体内容。
 - Files 列表在内容区居中，桌面宽度受控且各列间距均衡；窄屏切换为紧凑卡片，不允许产生横向滚动。
 - Pages 上传只能使用 `pages-dist`，不得上传仓库根目录。
 - `direction-approved.md` 仅是历史决策记录，不得保留或重新加入仓库。

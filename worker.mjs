@@ -87,17 +87,17 @@ const APP_STYLES = `
     .nav-item.license { margin-top: auto; }
     .page-shell { min-height: 100vh; margin-left: 88px; padding-top: 72px; }
     .page-content { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 48px 0 64px; }
-    .files-view { width: min(960px, 100%); margin: 0 auto; }
+    .files-view, .status-view { width: min(960px, 100%); margin: 0 auto; }
     .page-header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
     .eyebrow { margin: 0 0 8px; color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
     h1 { margin: 0; font-size: clamp(38px, 5vw, 58px); font-weight: 520; letter-spacing: -.035em; line-height: 1.05; text-wrap: balance; }
     .scope-chip { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: 999px; background: var(--primary-container); color: var(--on-primary-container); font-size: 13px; font-weight: 750; white-space: nowrap; }
-    .status-view { display: grid; align-content: center; min-height: calc(100vh - 184px); }
-    .status-view .page-header { margin-bottom: 28px; }
+    .status-view { display: grid; align-content: center; min-height: calc(100vh - 240px); }
+    .status-view .page-header { margin-bottom: 24px; }
     .status-card { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 22px; min-height: 144px; padding: 28px 32px; border: 1px solid #315544; border-radius: 28px; background: var(--success-container); }
     .status-check { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 22px; background: var(--success); color: #063824; }
     .status-check svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-    .status-message { margin: 0; color: #d6f6e4; font-size: clamp(19px, 2.2vw, 25px); font-weight: 650; letter-spacing: -.015em; }
+    .status-message { margin: 0; color: #d6f6e4; font-size: clamp(18px, 1.8vw, 22px); font-weight: 650; letter-spacing: -.015em; }
     .ready-badge { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 1px solid #4c7b64; border-radius: 999px; color: var(--success); font-size: 12px; font-weight: 800; letter-spacing: .08em; }
     .status-card.error { border-color: #8e3d39; background: var(--error-container); }
     .status-card.error .status-check { background: var(--error); color: #690005; }
