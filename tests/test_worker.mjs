@@ -20,7 +20,21 @@ function makeListedObject(key, size = 128) {
     key,
     size,
     uploaded: new Date("2026-08-25T00:00:00.000Z"),
+    httpMetadata: { contentType: "text/plain" },
   };
+}
+
+
+async function assertErrorPage(response, status, message) {
+  assert.equal(response.status, status);
+  assert.match(response.headers.get("content-type"), /^text\/html/);
+  assert.equal(response.headers.get("cache-control"), "private, no-store");
+  const body = await response.text();
+  assert.match(body, /<h1>Status<\/h1>/);
+  assert.ok(body.includes(message));
+  assert.match(body, new RegExp(`ERROR ${status}`));
+  assert.match(body, /class="nav-item disabled" aria-disabled="true"[\s\S]*Files/);
+  assert.doesNotMatch(body, /href="\/_files"/);
 }
 
 
@@ -59,36 +73,31 @@ function makeBucket({
 
 test("root reports deployment configuration", async () => {
   let response = await worker.fetch(new Request("https://example.com/"), {});
-  assert.equal(response.status, 500);
-  assert.equal(await response.text(), "R2 bucket binding is not configured");
+  await assertErrorPage(response, 500, "R2 bucket binding is not configured");
 
   const bucket = makeBucket();
   response = await worker.fetch(new Request("https://example.com/"), { BUCKET: bucket });
-  assert.equal(response.status, 500);
-  assert.equal(await response.text(), "ACCESS_KEYS variable is not configured");
+  await assertErrorPage(response, 500, "ACCESS_KEYS variable is not configured");
 
   response = await worker.fetch(new Request("https://example.com/"), {
     BUCKET: bucket,
     ACCESS_KEYS: "{}",
   });
-  assert.equal(response.status, 500);
-  assert.equal(await response.text(), "BROWSE_UUID variable is not configured");
+  await assertErrorPage(response, 500, "BROWSE_UUID variable is not configured");
 
   response = await worker.fetch(new Request("https://example.com/"), {
     BUCKET: bucket,
     ACCESS_KEYS: "not-json",
     BROWSE_UUID: "browse-uuid",
   });
-  assert.equal(response.status, 500);
-  assert.equal(await response.text(), "Invalid ACCESS_KEYS configuration");
+  await assertErrorPage(response, 500, "Invalid ACCESS_KEYS configuration");
 
   response = await worker.fetch(new Request("https://example.com/"), {
     BUCKET: bucket,
     ACCESS_KEYS: JSON.stringify({ "private.txt": 123 }),
     BROWSE_UUID: "browse-uuid",
   });
-  assert.equal(response.status, 500);
-  assert.equal(await response.text(), "Invalid ACCESS_KEYS configuration");
+  await assertErrorPage(response, 500, "Invalid ACCESS_KEYS configuration");
 
   response = await worker.fetch(new Request("https://example.com/"), {
     BUCKET: bucket,
@@ -135,7 +144,7 @@ test("file access handles keys, GET, HEAD, 404, and 405", async () => {
   };
 
   let response = await worker.fetch(new Request("https://example.com/private.txt"), env);
-  assert.equal(response.status, 403);
+  await assertErrorPage(response, 403, "Forbidden");
   assert.equal(bucket.calls.get.length, 0);
 
   response = await worker.fetch(
@@ -155,13 +164,13 @@ test("file access handles keys, GET, HEAD, 404, and 405", async () => {
   assert.deepEqual(bucket.calls.head, ["private.txt"]);
 
   response = await worker.fetch(new Request("https://example.com/missing.txt"), env);
-  assert.equal(response.status, 404);
+  await assertErrorPage(response, 404, "Not Found");
 
   response = await worker.fetch(
     new Request("https://example.com/private.txt", { method: "POST" }),
     env,
   );
-  assert.equal(response.status, 405);
+  await assertErrorPage(response, 405, "Method Not Allowed");
   assert.equal(response.headers.get("allow"), "GET, HEAD");
 });
 
@@ -177,8 +186,7 @@ test("R2 failures return a controlled error", async () => {
       ACCESS_KEYS: "{}",
       BROWSE_UUID: "browse-uuid",
     });
-    assert.equal(response.status, 500);
-    assert.equal(await response.text(), "Internal Server Error");
+    await assertErrorPage(response, 500, "Internal Server Error");
   } finally {
     console.error = originalError;
   }
@@ -208,7 +216,10 @@ test("public file listing excludes protected objects and safely links exact keys
   const body = await response.text();
   assert.match(body, /Public files/);
   assert.match(body, /class="file-list"/);
-  assert.match(body, /<span>Object key<\/span><span>Access<\/span><span>Size<\/span><span>Uploaded<\/span><span>Open<\/span>/);
+  assert.match(body, /<span>Object key<\/span><span>Type<\/span><span>Access<\/span><span>Size<\/span><span>Uploaded \(UTC\)<\/span>/);
+  assert.match(body, /text\/plain/);
+  assert.match(body, /2026-08-25 00:00:00/);
+  assert.doesNotMatch(body, />Open<|open-icon/);
   assert.match(body, /class="nav-item active" aria-current="page"[\s\S]*Files/);
   assert.match(body, /href="https:\/\/github\.com\/Fiatnorm\/R2Gate" target="_blank" rel="noopener noreferrer"/);
   assert.doesNotMatch(body, /R2Gate is running successfully\./);
@@ -217,7 +228,7 @@ test("public file listing excludes protected objects and safely links exact keys
   assert.doesNotMatch(body, /<script>/);
   assert.match(body, /folder\/&lt;script&gt;&amp; \?\.txt/);
   assert.match(body, /object=folder%2F%3Cscript%3E%26\+%3F\.txt/);
-  assert.deepEqual(bucket.calls.list, [{ limit: 200 }]);
+  assert.deepEqual(bucket.calls.list, [{ limit: 200, include: ["httpMetadata"] }]);
 
   response = await worker.fetch(
     new Request("https://example.com/_files?object=folder%2F%3Cscript%3E%26+%3F.txt"),
@@ -239,8 +250,7 @@ test("UUID listing requires the configured variable and creates working keyed li
     new Request("https://example.com/_files?uuid=browse-uuid"),
     { BUCKET: bucket, ACCESS_KEYS: accessKeys },
   );
-  assert.equal(response.status, 500);
-  assert.equal(await response.text(), "BROWSE_UUID variable is not configured");
+  await assertErrorPage(response, 500, "BROWSE_UUID variable is not configured");
   assert.equal(bucket.calls.list.length, 0);
 
   const env = { BUCKET: bucket, ACCESS_KEYS: accessKeys, BROWSE_UUID: "browse-uuid" };
@@ -248,14 +258,14 @@ test("UUID listing requires the configured variable and creates working keyed li
     new Request("https://example.com/_files?uuid=wrong"),
     env,
   );
-  assert.equal(response.status, 403);
+  await assertErrorPage(response, 403, "Forbidden");
   assert.equal(bucket.calls.list.length, 0);
 
   response = await worker.fetch(
     new Request("https://example.com/_files?uuid=browse-uuid&uuid=browse-uuid"),
     env,
   );
-  assert.equal(response.status, 403);
+  await assertErrorPage(response, 403, "Forbidden");
   assert.equal(bucket.calls.list.length, 0);
 
   response = await worker.fetch(
@@ -265,6 +275,8 @@ test("UUID listing requires the configured variable and creates working keyed li
   assert.equal(response.status, 200);
   const body = await response.text();
   assert.match(body, /All files/);
+  assert.match(body, /<span class="scope-chip">All<\/span>/);
+  assert.doesNotMatch(body, /Public \+ Protected/);
   assert.match(body, /Protected links contain an access key\./);
   assert.match(body, /public\.txt/);
   assert.match(body, /private\.txt/);
@@ -276,13 +288,13 @@ test("UUID listing requires the configured variable and creates working keyed li
     new Request("https://example.com/_files?object=private.txt"),
     env,
   );
-  assert.equal(response.status, 403);
+  await assertErrorPage(response, 403, "Forbidden");
 
   response = await worker.fetch(
     new Request("https://example.com/_files?object=private.txt&uuid=browse-uuid&key=file-key%26value"),
     env,
   );
-  assert.equal(response.status, 400);
+  await assertErrorPage(response, 400, "Bad Request");
 
   response = await worker.fetch(
     new Request("https://example.com/_files?object=private.txt&key=file-key%26value"),
@@ -334,8 +346,8 @@ test("file listing uses bounded cursor pagination and controls R2 errors", async
   body = await response.text();
   assert.match(body, /second\.txt/);
   assert.deepEqual(bucket.calls.list, [
-    { limit: 200 },
-    { limit: 200, cursor: "next/page+1" },
+    { limit: 200, include: ["httpMetadata"] },
+    { limit: 200, include: ["httpMetadata"], cursor: "next/page+1" },
   ]);
 
   const protectedBucket = makeBucket({
@@ -379,13 +391,13 @@ test("file listing uses bounded cursor pagination and controls R2 errors", async
     new Request("https://example.com/_files?cursor=protected-page&token=wrong"),
     protectedEnv,
   );
-  assert.equal(response.status, 403);
+  await assertErrorPage(response, 403, "Forbidden");
 
   response = await worker.fetch(
     new Request("https://example.com/_files?cursor=one&cursor=two"),
     env,
   );
-  assert.equal(response.status, 400);
+  await assertErrorPage(response, 400, "Bad Request");
 
   const failingBucket = makeBucket({ listFailing: true });
   const originalError = console.error;
@@ -396,8 +408,7 @@ test("file listing uses bounded cursor pagination and controls R2 errors", async
       ACCESS_KEYS: "{}",
       BROWSE_UUID: "browse-uuid",
     });
-    assert.equal(response.status, 500);
-    assert.equal(await response.text(), "Internal Server Error");
+    await assertErrorPage(response, 500, "Internal Server Error");
   } finally {
     console.error = originalError;
   }

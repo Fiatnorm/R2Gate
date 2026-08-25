@@ -18,6 +18,7 @@ R2Gate 是一个精简的 Cloudflare R2 文件读取与上传工具：
 - `upload_r2.py`：R2 S3 API 上传脚本。
 - `config.example.json`：不含真实密钥的上传配置示例。
 - `config.json`：本地真实上传配置，已被 Git 忽略。
+- `LICENSE`：MIT 开源许可证。
 
 访问 Worker 或 Pages 的根路径时，程序会先检查 `BUCKET` Binding，以及 `ACCESS_KEYS` 和 `BROWSE_UUID` 这两个普通文本变量。三项配置有效后才返回独立的 Material Design 3 深色 Status 页面，其中显示以下英文状态信息：
 
@@ -27,7 +28,7 @@ R2Gate is running successfully.
 
 Status 与 Files 使用统一的 Material Design 3 深色布局；左侧导航可在两个独立页面之间切换，并提供 GitHub 项目入口。页面使用根据项目图标制作的轻量橙色数据库 SVG 作为品牌图标和浏览器 favicon；`/favicon.svg` 与兼容路径 `/favicon.ico` 均可直接访问该图标。
 
-自检失败时返回 `500` 和对应英文提示：
+自检失败时返回 `500` 和对应英文提示。错误响应同样使用 Status 页面的 Material Design 3 深色 HTML 布局，以红色状态卡显示错误码和原因；错误页上的 Files 导航为不可点击状态：
 
 - 未正确添加 R2 Binding：`R2 bucket binding is not configured`
 - 未添加或留空 `ACCESS_KEYS`：`ACCESS_KEYS variable is not configured`
@@ -148,7 +149,7 @@ https://example.com/files/public.txt
 
 ## 文件查询页面
 
-Files 页面使用与 Status 页面统一的 navigation rail，并采用紧凑列表分别显示 Object Key、访问状态、大小和上传日期。页面不显示 Status 内容、UUID 或访问密钥文本。
+Files 页面使用与 Status 页面统一的 navigation rail，并采用紧凑列表分别显示 Object Key、文件类型、访问状态、大小和上传时间。文件类型来自同一次 R2 列表查询返回的 HTTP metadata，不会为每个对象额外调用 `get()` 或 `head()`；缺少类型时显示 `application/octet-stream`。上传时间按 UTC 精确到秒，表头显示 `Uploaded (UTC)`。页面不显示 Status 内容、UUID 或访问密钥文本，也不再设置单独的 Open 列；点击文件所在行即可打开对象。
 
 只查询不需要访问密钥的公开文件：
 
@@ -168,6 +169,7 @@ https://example.com/_files?uuid=your-browse-uuid
 - `BROWSE_UUID` 缺失或留空时，根路径、公开文件查询、全部文件查询和文件读取都会返回 `500`；缺少查询参数 `uuid` 时仍只显示 `ACCESS_KEYS` 中没有非空密钥的对象。
 - 携带错误、空白或重复的 `uuid` 返回 `403 Forbidden`，且不会发起 R2 列表请求。
 - 页面每次通过一次 `BUCKET.list()` 最多读取 200 个对象；Bucket 较大时使用 R2 cursor 打开下一页。
+- 全部文件页的范围标签显示 `All`，公开文件页显示 `Public`。
 - 全部文件查询的后续页使用由 `BROWSE_UUID` 对 cursor 生成的 HMAC-SHA-256 分页令牌，下一页 HTML 和网址不会重复包含 UUID；令牌只对对应 cursor 有效。
 - 页面中的文件链接使用 `/_files?object=<Object Key>`；受保护文件自动增加经过 URL 编码的 `key` 参数，点击后沿用现有文件鉴权规则。
 - 查询页面不显示 UUID 或访问密钥文本，但受保护文件的完整链接本身包含对应密钥，可以在浏览器开发者工具中查看。
@@ -243,3 +245,7 @@ GitHub Actions 会在 Push、Pull Request 和手动触发时运行以下只读�
 - `config.json`、`.venv` 和本地环境文件未被 Git 跟踪。
 
 CI 不包含 Cloudflare 部署步骤，也不需要保存 Cloudflare API Token。
+
+## 开源协议
+
+R2Gate 使用 [MIT License](LICENSE)。

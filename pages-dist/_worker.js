@@ -35,10 +35,7 @@ const FILES_HEADERS = {
   "cache-control": "private, no-store",
   "x-robots-tag": "noindex, nofollow, noarchive",
 };
-const FILES_ERROR_HEADERS = {
-  ...FILES_HEADERS,
-  "content-type": "text/plain; charset=utf-8",
-};
+const ERROR_HEADERS = FILES_HEADERS;
 
 const APP_STYLES = `
     :root {
@@ -61,6 +58,8 @@ const APP_STYLES = `
       --success-container: #143c2c;
       --warning: #f4d06f;
       --warning-container: #4d4112;
+      --error: #ffb4ab;
+      --error-container: #5f1717;
     }
     *, *::before, *::after { box-sizing: border-box; }
     html { min-width: 320px; background: var(--surface); }
@@ -79,6 +78,8 @@ const APP_STYLES = `
     .nav-item:hover { background: var(--surface-container-high); color: var(--on-surface); }
     .nav-item:active { transform: scale(.97); }
     .nav-item.active { background: var(--primary-container); color: var(--on-primary-container); }
+    .nav-item.disabled { color: #706c78; cursor: not-allowed; }
+    .nav-item.disabled:hover { background: transparent; color: #706c78; }
     .nav-item.github { margin-top: auto; }
     .page-shell { min-height: 100vh; margin-left: 88px; padding-top: 72px; }
     .page-content { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 48px 0 64px; }
@@ -93,10 +94,16 @@ const APP_STYLES = `
     .status-check svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
     .status-message { margin: 0; color: #d6f6e4; font-size: clamp(19px, 2.2vw, 25px); font-weight: 650; letter-spacing: -.015em; }
     .ready-badge { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 1px solid #4c7b64; border-radius: 999px; color: var(--success); font-size: 12px; font-weight: 800; letter-spacing: .08em; }
+    .status-card.error { border-color: #8e3d39; background: var(--error-container); }
+    .status-card.error .status-check { background: var(--error); color: #690005; }
+    .status-card.error .status-message { color: #ffdad6; }
+    .status-card.error .ready-badge { border-color: #a74f49; color: var(--error); }
+    .status-copy { min-width: 0; }
+    .status-detail { margin: 7px 0 0; color: #efb8b3; font-size: 14px; }
     .security-note { display: flex; align-items: center; gap: 12px; min-height: 52px; margin: 0 0 20px; padding: 12px 16px; border-radius: 16px; background: var(--warning-container); color: #ffe38a; font-size: 14px; font-weight: 650; }
     .security-note svg { width: 21px; height: 21px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
     .file-list { overflow: hidden; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); }
-    .file-list-head, .file-row { display: grid; grid-template-columns: 42px minmax(240px, 1fr) 124px 106px 132px 42px; align-items: center; gap: 12px; }
+    .file-list-head, .file-row { display: grid; grid-template-columns: 42px minmax(210px, 1fr) minmax(140px, 180px) 112px 94px 174px; align-items: center; gap: 12px; }
     .file-list-head { min-height: 48px; padding: 0 20px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-high); color: var(--primary); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
     .file-list ul { margin: 0; padding: 0; list-style: none; }
     .file-list li + li { border-top: 1px solid var(--outline-variant); }
@@ -110,10 +117,8 @@ const APP_STYLES = `
     .access-badge { display: inline-flex; align-items: center; justify-content: center; justify-self: start; min-height: 32px; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 750; }
     .access-badge.public { background: #123f2b; color: #94f2bd; }
     .access-badge.protected { background: #54470f; color: #ffe37d; }
+    .type-cell { overflow: hidden; color: var(--on-surface-variant); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
     .size-cell, .date-cell { color: var(--on-surface-variant); font-size: 13px; font-variant-numeric: tabular-nums; }
-    .open-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 999px; color: var(--primary); }
-    .open-icon svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; transition: transform 160ms ease; }
-    .file-row:hover .open-icon svg { transform: translateX(3px); }
     .empty { display: grid; place-items: center; min-height: 180px; margin: 0; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); color: var(--on-surface-variant); }
     .pagination { display: flex; justify-content: end; margin-top: 20px; }
     .next-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 0 22px; border-radius: 999px; background: var(--primary); color: var(--on-primary); text-decoration: none; font-size: 14px; font-weight: 760; transition: filter 160ms ease, transform 160ms ease; }
@@ -140,12 +145,11 @@ const APP_STYLES = `
       .security-note { align-items: start; }
       .file-list { border-radius: 20px; }
       .file-list-head { display: none; }
-      .file-row { grid-template-columns: 38px minmax(0, 1fr) auto 32px; gap: 10px; min-height: 82px; padding: 12px 14px; }
+      .file-row { grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; min-height: 82px; padding: 12px 14px; }
       .file-icon { width: 36px; height: 36px; }
       .object-meta { display: block; }
-      .size-cell, .date-cell { display: none; }
+      .type-cell, .size-cell, .date-cell { display: none; }
       .access-badge { min-height: 30px; padding: 0 9px; font-size: 11px; }
-      .open-icon { width: 32px; height: 44px; }
       .pagination { margin-top: 16px; }
       .next-button { width: 100%; }
     }
@@ -177,17 +181,19 @@ function databaseIcon() {
   </svg>`;
 }
 
-function navigation(activePage) {
+function navigation(activePage, filesEnabled = true) {
   const statusItem = activePage === "status"
     ? `<span class="nav-item active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg><span>Status</span></span>`
     : `<a class="nav-item" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg><span>Status</span></a>`;
-  const filesItem = activePage === "files"
+  const filesItem = !filesEnabled
+    ? `<span class="nav-item disabled" aria-disabled="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.7 2H20v8.8A1.7 1.7 0 0 1 18.3 20H5.7A1.7 1.7 0 0 1 4 18.3Z"/><path d="M4 10h16"/></svg><span>Files</span></span>`
+    : activePage === "files"
     ? `<span class="nav-item active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.7 2H20v8.8A1.7 1.7 0 0 1 18.3 20H5.7A1.7 1.7 0 0 1 4 18.3Z"/><path d="M4 10h16"/></svg><span>Files</span></span>`
     : `<a class="nav-item" href="${FILES_PATH}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.7 2H20v8.8A1.7 1.7 0 0 1 18.3 20H5.7A1.7 1.7 0 0 1 4 18.3Z"/><path d="M4 10h16"/></svg><span>Files</span></a>`;
   return `<aside class="nav-rail" aria-label="Primary navigation"><nav>${statusItem}${filesItem}<a class="nav-item github" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h5v5"/><path d="m20 4-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg><span>GitHub</span></a></nav></aside>`;
 }
 
-function appPage({ title, activePage, topMeta = "", content }) {
+function appPage({ title, activePage, topMeta = "", content, filesEnabled = true }) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -201,7 +207,7 @@ function appPage({ title, activePage, topMeta = "", content }) {
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="topbar"><a class="brand-lockup" href="/" aria-label="R2Gate status">${databaseIcon()}<span>R2Gate</span></a>${topMeta ? `<span class="top-meta">${escapeHtml(topMeta)}</span>` : ""}</header>
-  ${navigation(activePage)}
+  ${navigation(activePage, filesEnabled)}
   <div class="page-shell"><main class="page-content" id="main-content">${content}</main></div>
 </body>
 </html>`;
@@ -272,7 +278,16 @@ function formatSize(size) {
 
 function formatUploaded(uploaded) {
   const date = uploaded instanceof Date ? uploaded : new Date(uploaded);
-  return Number.isNaN(date.getTime()) ? "Unknown" : date.toISOString().slice(0, 10);
+  return Number.isNaN(date.getTime())
+    ? "Unknown"
+    : date.toISOString().slice(0, 19).replace("T", " ");
+}
+
+function formatContentType(object) {
+  const contentType = object?.httpMetadata?.contentType;
+  return typeof contentType === "string" && contentType.trim()
+    ? contentType.trim()
+    : "application/octet-stream";
 }
 
 function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken }) {
@@ -280,15 +295,16 @@ function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken }) {
     const requiredKey = requiredKeyFor(accessKeys, object.key);
     const href = objectHref(object.key, requiredKey);
     const visibility = requiredKey ? "Protected" : "Public";
+    const type = escapeHtml(formatContentType(object));
     const size = escapeHtml(formatSize(object.size));
     const uploaded = escapeHtml(formatUploaded(object.uploaded));
     return `<li><a class="file-row" href="${escapeHtml(href)}" rel="noreferrer" title="${escapeHtml(object.key)}">
       <span class="file-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4V20H7Z"/><path d="M14 3.5V8h4M10 12h5M10 15h5"/></svg></span>
-      <span class="object-cell"><span class="object-name">${escapeHtml(object.key)}</span><span class="object-meta">${size} · ${uploaded}</span></span>
+      <span class="object-cell"><span class="object-name">${escapeHtml(object.key)}</span><span class="object-meta">${type} · ${size} · ${uploaded} UTC</span></span>
+      <span class="type-cell" title="${type}">${type}</span>
       <span class="access-badge ${requiredKey ? "protected" : "public"}">${visibility}</span>
       <span class="size-cell">${size}</span>
       <span class="date-cell">${uploaded}</span>
-      <span class="open-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M14 8l4 4-4 4"/></svg></span>
     </a></li>`;
   }).join("");
 
@@ -305,9 +321,9 @@ function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken }) {
   const note = showAll
     ? `<p class="security-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="10" width="12" height="10" rx="2"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>Protected links contain an access key.</p>`
     : "";
-  const content = `<header class="page-header"><div><p class="eyebrow">${showAll ? "Authorized scope" : "Public scope"}</p><h1>${scope}</h1></div><span class="scope-chip">${showAll ? "Public + Protected" : "Public"}</span></header>
+  const content = `<header class="page-header"><div><p class="eyebrow">${showAll ? "Authorized scope" : "Public scope"}</p><h1>${scope}</h1></div><span class="scope-chip">${showAll ? "All" : "Public"}</span></header>
     ${note}
-    ${rows ? `<section class="file-list" aria-label="${scope}"><div class="file-list-head" aria-hidden="true"><span></span><span>Object key</span><span>Access</span><span>Size</span><span>Uploaded</span><span>Open</span></div><ul>${rows}</ul></section>` : `<p class="empty">${emptyMessage}</p>`}
+    ${rows ? `<section class="file-list" aria-label="${scope}"><div class="file-list-head" aria-hidden="true"><span></span><span>Object key</span><span>Type</span><span>Access</span><span>Size</span><span>Uploaded (UTC)</span></div><ul>${rows}</ul></section>` : `<p class="empty">${emptyMessage}</p>`}
     ${nextLink}`;
   return appPage({ title: scope, activePage: "files", topMeta: showAll ? "All access" : "Public access", content });
 }
@@ -317,17 +333,27 @@ function rootPage() {
   return appPage({ title: "Status", activePage: "status", content });
 }
 
+function errorPage(status, message) {
+  const content = `<section class="status-view"><header class="page-header"><div><p class="eyebrow">Service error</p><h1>Status</h1></div></header><div class="status-card error"><span class="status-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5M12 17h.01"/><path d="M10.3 4.7 3.8 16a2 2 0 0 0 1.7 3h13a2 2 0 0 0 1.7-3L13.7 4.7a2 2 0 0 0-3.4 0Z"/></svg></span><div class="status-copy"><p class="status-message">${escapeHtml(message)}</p><p class="status-detail">Return to Status after resolving the error. Files navigation is disabled on this page.</p></div><span class="ready-badge">ERROR ${status}</span></div></section>`;
+  return appPage({ title: `Error ${status}`, activePage: "status", content, filesEnabled: false });
+}
+
+function errorResponse(status, message, isHead = false, extraHeaders = {}) {
+  const headers = new Headers(ERROR_HEADERS);
+  for (const [name, value] of Object.entries(extraHeaders)) {
+    headers.set(name, value);
+  }
+  return new Response(isHead ? null : errorPage(status, message), { status, headers });
+}
+
 export default {
   async fetch(request, env) {
+    const isHead = request.method === "HEAD";
     if (request.method !== "GET" && request.method !== "HEAD") {
-      return new Response("Method Not Allowed", {
-        status: 405,
-        headers: { allow: "GET, HEAD" },
-      });
+      return errorResponse(405, "Method Not Allowed", false, { allow: "GET, HEAD" });
     }
 
     const url = new URL(request.url);
-    const isHead = request.method === "HEAD";
 
     if (url.pathname === "/favicon.svg" || url.pathname === "/favicon.ico") {
       return new Response(isHead ? null : FAVICON_SVG, {
@@ -343,15 +369,15 @@ export default {
       typeof env.BUCKET.get !== "function" ||
       typeof env.BUCKET.head !== "function"
     ) {
-      return new Response("R2 bucket binding is not configured", { status: 500 });
+      return errorResponse(500, "R2 bucket binding is not configured", isHead);
     }
 
     if (typeof env.ACCESS_KEYS !== "string" || !env.ACCESS_KEYS.trim()) {
-      return new Response("ACCESS_KEYS variable is not configured", { status: 500 });
+      return errorResponse(500, "ACCESS_KEYS variable is not configured", isHead);
     }
 
     if (typeof env.BROWSE_UUID !== "string" || !env.BROWSE_UUID.trim()) {
-      return new Response("BROWSE_UUID variable is not configured", { status: 500 });
+      return errorResponse(500, "BROWSE_UUID variable is not configured", isHead);
     }
 
     let accessKeys;
@@ -366,7 +392,7 @@ export default {
         throw new Error();
       }
     } catch {
-      return new Response("Invalid ACCESS_KEYS configuration", { status: 500 });
+      return errorResponse(500, "Invalid ACCESS_KEYS configuration", isHead);
     }
 
     if (url.pathname === "/") {
@@ -377,10 +403,7 @@ export default {
 
     if (url.pathname === FILES_PATH && !url.searchParams.has("object")) {
       if (typeof env.BUCKET.list !== "function") {
-        return new Response("R2 bucket listing is not configured", {
-          status: 500,
-          headers: FILES_ERROR_HEADERS,
-        });
+        return errorResponse(500, "R2 bucket listing is not configured", isHead);
       }
 
       const uuidValues = url.searchParams.getAll("uuid");
@@ -392,7 +415,7 @@ export default {
         (cursorValues.length === 1 && cursorValues[0].length > MAX_QUERY_VALUE_LENGTH) ||
         (tokenValues.length === 1 && tokenValues[0].length > 128)
       ) {
-        return new Response("Bad Request", { status: 400, headers: FILES_ERROR_HEADERS });
+        return errorResponse(400, "Bad Request", isHead);
       }
 
       const showAll = uuidValues.length > 0 || tokenValues.length > 0;
@@ -410,7 +433,7 @@ export default {
           authorized = timingSafeEqual(tokenValues[0], expectedToken);
         }
         if (!authorized) {
-          return new Response("Forbidden", { status: 403, headers: FILES_ERROR_HEADERS });
+          return errorResponse(403, "Forbidden", isHead);
         }
       }
 
@@ -418,7 +441,7 @@ export default {
         return new Response(null, { headers: FILES_HEADERS });
       }
 
-      const options = { limit: FILES_PER_PAGE };
+      const options = { limit: FILES_PER_PAGE, include: ["httpMetadata"] };
       if (cursorValues.length === 1 && cursorValues[0]) {
         options.cursor = cursorValues[0];
       }
@@ -451,10 +474,7 @@ export default {
         return new Response(body, { headers: FILES_HEADERS });
       } catch (error) {
         console.error("R2 list failed", error);
-        return new Response("Internal Server Error", {
-          status: 500,
-          headers: FILES_ERROR_HEADERS,
-        });
+        return errorResponse(500, "Internal Server Error", isHead);
       }
     }
 
@@ -471,21 +491,18 @@ export default {
         url.searchParams.has("token")
       ))
     ) {
-      return new Response("Bad Request", {
-        status: 400,
-        headers: FILES_ERROR_HEADERS,
-      });
+      return errorResponse(400, "Bad Request", isHead);
     }
 
     const objectKey = objectValues.length === 1 ? objectValues[0] : url.pathname.slice(1);
     const requiredKey = requiredKeyFor(accessKeys, objectKey);
 
     if (typeof requiredKey !== "string") {
-      return new Response("Invalid ACCESS_KEYS configuration", { status: 500 });
+      return errorResponse(500, "Invalid ACCESS_KEYS configuration", isHead);
     }
 
     if (requiredKey && url.searchParams.get("key") !== requiredKey) {
-      return new Response("Forbidden", { status: 403 });
+      return errorResponse(403, "Forbidden", isHead);
     }
 
     try {
@@ -494,7 +511,7 @@ export default {
         : await env.BUCKET.get(objectKey);
 
       if (object === null) {
-        return new Response("Not Found", { status: 404 });
+        return errorResponse(404, "Not Found", isHead);
       }
 
       const headers = new Headers();
@@ -509,7 +526,7 @@ export default {
       return new Response(isHead ? null : object.body, { headers });
     } catch (error) {
       console.error("R2 read failed", error);
-      return new Response("Internal Server Error", { status: 500 });
+      return errorResponse(500, "Internal Server Error", isHead);
     }
   },
 };
