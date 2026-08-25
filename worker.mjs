@@ -87,6 +87,7 @@ const APP_STYLES = `
     .nav-item.license { margin-top: auto; }
     .page-shell { min-height: 100vh; margin-left: 88px; padding-top: 72px; }
     .page-content { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 48px 0 64px; }
+    .files-view { width: min(960px, 100%); margin: 0 auto; }
     .page-header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
     .eyebrow { margin: 0 0 8px; color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
     h1 { margin: 0; font-size: clamp(38px, 5vw, 58px); font-weight: 520; letter-spacing: -.035em; line-height: 1.05; text-wrap: balance; }
@@ -109,22 +110,23 @@ const APP_STYLES = `
     .security-note { display: flex; align-items: center; gap: 12px; min-height: 52px; margin: 0 0 20px; padding: 12px 16px; border-radius: 16px; background: var(--warning-container); color: #ffe38a; font-size: 14px; font-weight: 650; }
     .security-note svg { width: 21px; height: 21px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
     .file-list { overflow: hidden; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); }
-    .file-list-head, .file-row { display: grid; grid-template-columns: 42px minmax(230px, 1fr) 116px minmax(150px, 180px) 96px 200px; align-items: center; column-gap: 20px; }
-    .file-list-head { min-height: 48px; padding: 0 20px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-high); color: var(--primary); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .file-list-head, .file-row { display: grid; grid-template-columns: 36px minmax(220px, 1fr) 104px 144px 84px 184px; align-items: center; column-gap: 14px; }
+    .file-list-head { min-height: 44px; padding: 0 16px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-high); color: var(--primary); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .file-list-head > span:nth-child(n+3) { justify-self: center; text-align: center; }
     .file-list ul { margin: 0; padding: 0; list-style: none; }
     .file-list li + li { border-top: 1px solid var(--outline-variant); }
-    .file-row { min-height: 76px; padding: 10px 20px; color: var(--on-surface); text-decoration: none; transition: background-color 160ms ease; }
+    .file-row { min-height: 64px; padding: 8px 16px; color: var(--on-surface); text-decoration: none; transition: background-color 160ms ease; }
     .file-row:hover { background: var(--surface-container-high); }
-    .file-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--surface-container-highest); color: var(--on-surface-variant); }
-    .file-icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .file-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--surface-container-highest); color: var(--on-surface-variant); }
+    .file-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
     .object-cell { min-width: 0; }
     .object-name { display: block; overflow-wrap: anywhere; font-weight: 680; letter-spacing: -.01em; }
     .object-meta { display: none; margin-top: 3px; color: var(--on-surface-variant); font-size: 12px; }
-    .access-badge { display: inline-flex; align-items: center; justify-content: center; justify-self: start; min-height: 32px; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 750; }
+    .access-badge { display: inline-flex; align-items: center; justify-content: center; justify-self: center; min-height: 30px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 750; }
     .access-badge.public { background: #123f2b; color: #94f2bd; }
     .access-badge.protected { background: #54470f; color: #ffe37d; }
-    .type-cell { overflow: hidden; color: var(--on-surface-variant); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
-    .size-cell, .date-cell { color: var(--on-surface-variant); font-size: 13px; font-variant-numeric: tabular-nums; }
+    .type-cell { max-width: 100%; overflow: hidden; color: var(--on-surface-variant); font-size: 13px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+    .size-cell, .date-cell { justify-self: center; color: var(--on-surface-variant); font-size: 13px; font-variant-numeric: tabular-nums; text-align: center; }
     .empty { display: grid; place-items: center; min-height: 180px; margin: 0; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); color: var(--on-surface-variant); }
     .pagination { display: flex; justify-content: end; margin-top: 20px; }
     .next-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 0 22px; border-radius: 999px; background: var(--primary); color: var(--on-primary); text-decoration: none; font-size: 14px; font-weight: 760; transition: filter 160ms ease, transform 160ms ease; }
@@ -223,12 +225,12 @@ function appPage({ title, activePage, topMeta = "", content, filesEnabled = true
 </html>`;
 }
 
-function timingSafeEqual(left, right) {
+function timingSafeEqual(left, right, maxLength = 128) {
   if (
     typeof left !== "string" ||
     typeof right !== "string" ||
-    left.length > 128 ||
-    right.length > 128
+    left.length > maxLength ||
+    right.length > maxLength
   ) {
     return false;
   }
@@ -316,8 +318,7 @@ function formatContentType(object) {
     : "application/octet-stream";
 }
 
-function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken, displayTimeZone }) {
-  const uploadedFormatter = createUploadedFormatter(displayTimeZone);
+function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken, displayTimeZone, uploadedFormatter }) {
   const timeZoneLabel = displayTimeZone === DEFAULT_DISPLAY_TIME_ZONE
     ? "GMT+8"
     : displayTimeZone;
@@ -351,10 +352,10 @@ function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken, displa
   const note = showAll
     ? `<p class="security-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="10" width="12" height="10" rx="2"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>Protected links contain an access key.</p>`
     : "";
-  const content = `<header class="page-header"><div><p class="eyebrow">${showAll ? "Authorized scope" : "Public scope"}</p><h1>${scope}</h1></div><span class="scope-chip">${showAll ? "Protected" : "Public"}</span></header>
+  const content = `<section class="files-view"><header class="page-header"><div><p class="eyebrow">${showAll ? "Authorized scope" : "Public scope"}</p><h1>${scope}</h1></div><span class="scope-chip">${showAll ? "Protected" : "Public"}</span></header>
     ${note}
     ${rows ? `<section class="file-list" aria-label="${scope}"><div class="file-list-head" aria-hidden="true"><span></span><span>Object key</span><span>Access</span><span>Type</span><span>Size</span><span>Uploaded (${escapeHtml(timeZoneLabel)})</span></div><ul>${rows}</ul></section>` : `<p class="empty">${emptyMessage}</p>`}
-    ${nextLink}`;
+    ${nextLink}</section>`;
   return appPage({ title: scope, activePage: "files", topMeta: showAll ? "Protected access" : "Public access", content });
 }
 
@@ -402,7 +403,8 @@ export default {
     if (
       !env.BUCKET ||
       typeof env.BUCKET.get !== "function" ||
-      typeof env.BUCKET.head !== "function"
+      typeof env.BUCKET.head !== "function" ||
+      typeof env.BUCKET.list !== "function"
     ) {
       configurationIssues.push("R2 bucket binding is not configured");
     }
@@ -438,8 +440,9 @@ export default {
         displayTimeZone = env.DISPLAY_TIME_ZONE.trim();
       }
     }
+    let uploadedFormatter;
     try {
-      createUploadedFormatter(displayTimeZone);
+      uploadedFormatter = createUploadedFormatter(displayTimeZone);
     } catch {
       configurationIssues.push("Invalid DISPLAY_TIME_ZONE configuration");
     }
@@ -455,10 +458,6 @@ export default {
     }
 
     if (url.pathname === FILES_PATH && !url.searchParams.has("object")) {
-      if (typeof env.BUCKET.list !== "function") {
-        return errorResponse(500, "R2 bucket listing is not configured", isHead);
-      }
-
       const uuidValues = url.searchParams.getAll("uuid");
       const tokenValues = url.searchParams.getAll("token");
       const cursorValues = url.searchParams.getAll("cursor");
@@ -524,6 +523,7 @@ export default {
           nextCursor,
           nextToken,
           displayTimeZone,
+          uploadedFormatter,
         });
         return new Response(body, { headers: FILES_HEADERS });
       } catch (error) {
@@ -555,8 +555,14 @@ export default {
       return errorResponse(500, "Invalid ACCESS_KEYS configuration", isHead);
     }
 
-    if (requiredKey && url.searchParams.get("key") !== requiredKey) {
-      return errorResponse(403, "Forbidden", isHead);
+    if (requiredKey) {
+      const keyValues = url.searchParams.getAll("key");
+      if (
+        keyValues.length !== 1 ||
+        !timingSafeEqual(keyValues[0], requiredKey, MAX_QUERY_VALUE_LENGTH)
+      ) {
+        return errorResponse(403, "Forbidden", isHead);
+      }
     }
 
     try {

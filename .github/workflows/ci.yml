@@ -50,5 +50,7 @@ jobs:
       - name: Verify protected files are not tracked
         run: |
           test ! -e config.json
+          test ! -e direction-approved.md
           ! git ls-files --error-unmatch config.json
+          ! git ls-files --error-unmatch direction-approved.md
           ! git ls-files | grep -E '^(\.venv/|\.env|\.dev\.vars)'

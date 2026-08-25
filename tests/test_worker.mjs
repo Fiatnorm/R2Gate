@@ -142,6 +142,13 @@ test("root reports deployment configuration", async () => {
   assert.match(body, /href="\/favicon\.svg"/);
   assert.match(body, /id="brand-orange"/);
   assert.doesNotMatch(body, /class="file-list"/);
+
+  response = await worker.fetch(new Request("https://example.com/"), {
+    BUCKET: { get: bucket.get, head: bucket.head },
+    ACCESS_KEYS: "{}",
+    BROWSE_UUID: "browse-uuid",
+  });
+  await assertErrorPage(response, 500, "R2 bucket binding is not configured");
 });
 
 
@@ -179,6 +186,14 @@ test("file access handles keys, GET, HEAD, 404, and 405", async () => {
   assert.equal(response.status, 200);
   assert.equal(await response.text(), "body:private.txt");
   assert.equal(response.headers.get("etag"), "etag-private.txt");
+
+  const readsAfterAuthorizedGet = bucket.calls.get.length;
+  response = await worker.fetch(
+    new Request("https://example.com/private.txt?key=file-key&key=file-key"),
+    env,
+  );
+  await assertErrorPage(response, 403, "Forbidden");
+  assert.equal(bucket.calls.get.length, readsAfterAuthorizedGet);
 
   response = await worker.fetch(
     new Request("https://example.com/private.txt?key=file-key", { method: "HEAD" }),
@@ -240,6 +255,8 @@ test("public file listing excludes protected objects and safely links exact keys
   assert.equal(response.headers.get("x-robots-tag"), "noindex, nofollow, noarchive");
   const body = await response.text();
   assert.match(body, /Public files/);
+  assert.match(body, /class="files-view"/);
+  assert.match(body, /\.files-view \{ width: min\(960px, 100%\); margin: 0 auto; \}/);
   assert.match(body, /class="file-list"/);
   assert.match(body, /<span>Object key<\/span><span>Access<\/span><span>Type<\/span><span>Size<\/span><span>Uploaded \(GMT\+8\)<\/span>/);
   assert.match(body, /text\/plain/);
@@ -348,6 +365,14 @@ test("UUID listing requires the configured variable and creates working keyed li
   assert.equal(response.headers.get("referrer-policy"), "no-referrer");
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   assert.equal(await response.text(), "body:private.txt");
+
+  const readsAfterKeyedQuery = bucket.calls.get.length;
+  response = await worker.fetch(
+    new Request("https://example.com/_files?object=private.txt&key=file-key%26value&key=file-key%26value"),
+    env,
+  );
+  await assertErrorPage(response, 403, "Forbidden");
+  assert.equal(bucket.calls.get.length, readsAfterKeyedQuery);
 
   const listCalls = bucket.calls.list.length;
   response = await worker.fetch(
