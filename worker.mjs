@@ -1,8 +1,12 @@
 const SUCCESS_MESSAGE = "R2Gate is running successfully.";
 const GITHUB_URL = "https://github.com/Fiatnorm/R2Gate";
+const LICENSE_URL = "https://raw.githubusercontent.com/Fiatnorm/R2Gate/refs/heads/main/LICENSE";
 const FILES_PATH = "/_files";
 const FILES_PER_PAGE = 200;
 const MAX_QUERY_VALUE_LENGTH = 4096;
+// Optional Cloudflare Plaintext variable: set DISPLAY_TIME_ZONE to another
+// IANA time zone (for example, "Europe/London") to change uploaded-time display.
+const DEFAULT_DISPLAY_TIME_ZONE = "Asia/Singapore";
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
     <linearGradient id="orange" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
@@ -80,7 +84,7 @@ const APP_STYLES = `
     .nav-item.active { background: var(--primary-container); color: var(--on-primary-container); }
     .nav-item.disabled { color: #706c78; cursor: not-allowed; }
     .nav-item.disabled:hover { background: transparent; color: #706c78; }
-    .nav-item.github { margin-top: auto; }
+    .nav-item.license { margin-top: auto; }
     .page-shell { min-height: 100vh; margin-left: 88px; padding-top: 72px; }
     .page-content { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 48px 0 64px; }
     .page-header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
@@ -100,10 +104,12 @@ const APP_STYLES = `
     .status-card.error .ready-badge { border-color: #a74f49; color: var(--error); }
     .status-copy { min-width: 0; }
     .status-detail { margin: 7px 0 0; color: #efb8b3; font-size: 14px; }
+    .status-issues { margin: 10px 0 0; padding-left: 20px; color: #ffdad6; font-size: 15px; }
+    .status-issues li + li { margin-top: 5px; }
     .security-note { display: flex; align-items: center; gap: 12px; min-height: 52px; margin: 0 0 20px; padding: 12px 16px; border-radius: 16px; background: var(--warning-container); color: #ffe38a; font-size: 14px; font-weight: 650; }
     .security-note svg { width: 21px; height: 21px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
     .file-list { overflow: hidden; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); }
-    .file-list-head, .file-row { display: grid; grid-template-columns: 42px minmax(210px, 1fr) minmax(140px, 180px) 112px 94px 174px; align-items: center; gap: 12px; }
+    .file-list-head, .file-row { display: grid; grid-template-columns: 42px minmax(230px, 1fr) 116px minmax(150px, 180px) 96px 200px; align-items: center; column-gap: 20px; }
     .file-list-head { min-height: 48px; padding: 0 20px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-high); color: var(--primary); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
     .file-list ul { margin: 0; padding: 0; list-style: none; }
     .file-list li + li { border-top: 1px solid var(--outline-variant); }
@@ -125,15 +131,23 @@ const APP_STYLES = `
     .next-button:hover { filter: brightness(1.06); }
     .next-button:active { transform: scale(.98); }
     :focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+    @media (max-width: 980px) {
+      .file-list-head { display: none; }
+      .file-row { grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; min-height: 82px; padding: 12px 14px; }
+      .file-icon { width: 36px; height: 36px; }
+      .object-meta { display: block; }
+      .type-cell, .size-cell, .date-cell { display: none; }
+      .access-badge { min-height: 30px; padding: 0 9px; font-size: 11px; }
+    }
     @media (max-width: 760px) {
       .topbar { height: 64px; padding: 0 16px; }
       .brand-lockup { gap: 10px; font-size: 20px; }
       .brand-icon { width: 38px; height: 38px; }
       .top-meta { min-height: 36px; padding: 0 12px; font-size: 12px; }
       .nav-rail { inset: auto 0 0 0; width: auto; height: 76px; padding: 5px 8px max(5px, env(safe-area-inset-bottom)); border-top: 1px solid var(--outline-variant); border-right: 0; }
-      .nav-rail nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+      .nav-rail nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
       .nav-item { width: 100%; min-height: 62px; border-radius: 20px; }
-      .nav-item.github { margin-top: 0; }
+      .nav-item.license { margin-top: 0; }
       .page-shell { margin-left: 0; padding: 64px 0 76px; }
       .page-content { width: calc(100% - 24px); padding: 28px 0 36px; }
       .page-header { align-items: center; gap: 12px; margin-bottom: 20px; }
@@ -144,12 +158,6 @@ const APP_STYLES = `
       .ready-badge { grid-column: 1 / -1; justify-self: start; }
       .security-note { align-items: start; }
       .file-list { border-radius: 20px; }
-      .file-list-head { display: none; }
-      .file-row { grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; min-height: 82px; padding: 12px 14px; }
-      .file-icon { width: 36px; height: 36px; }
-      .object-meta { display: block; }
-      .type-cell, .size-cell, .date-cell { display: none; }
-      .access-badge { min-height: 30px; padding: 0 9px; font-size: 11px; }
       .pagination { margin-top: 16px; }
       .next-button { width: 100%; }
     }
@@ -190,7 +198,9 @@ function navigation(activePage, filesEnabled = true) {
     : activePage === "files"
     ? `<span class="nav-item active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.7 2H20v8.8A1.7 1.7 0 0 1 18.3 20H5.7A1.7 1.7 0 0 1 4 18.3Z"/><path d="M4 10h16"/></svg><span>Files</span></span>`
     : `<a class="nav-item" href="${FILES_PATH}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.7 2H20v8.8A1.7 1.7 0 0 1 18.3 20H5.7A1.7 1.7 0 0 1 4 18.3Z"/><path d="M4 10h16"/></svg><span>Files</span></a>`;
-  return `<aside class="nav-rail" aria-label="Primary navigation"><nav>${statusItem}${filesItem}<a class="nav-item github" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h5v5"/><path d="m20 4-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg><span>GitHub</span></a></nav></aside>`;
+  const licenseItem = `<a class="nav-item license" href="${LICENSE_URL}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4V20H7Z"/><path d="M14 3.5V8h4M10 12h5M10 15h5"/></svg><span>License</span></a>`;
+  const githubItem = `<a class="nav-item github" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h5v5"/><path d="m20 4-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg><span>GitHub</span></a>`;
+  return `<aside class="nav-rail" aria-label="Primary navigation"><nav>${statusItem}${filesItem}${licenseItem}${githubItem}</nav></aside>`;
 }
 
 function appPage({ title, activePage, topMeta = "", content, filesEnabled = true }) {
@@ -276,11 +286,27 @@ function formatSize(size) {
   return `${value >= 10 ? value.toFixed(1) : value.toFixed(2)} ${units[unitIndex]}`;
 }
 
-function formatUploaded(uploaded) {
+function createUploadedFormatter(timeZone) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+}
+
+function formatUploaded(uploaded, formatter) {
   const date = uploaded instanceof Date ? uploaded : new Date(uploaded);
-  return Number.isNaN(date.getTime())
-    ? "Unknown"
-    : date.toISOString().slice(0, 19).replace("T", " ");
+  if (Number.isNaN(date.getTime())) return "Unknown";
+
+  const values = Object.fromEntries(
+    formatter.formatToParts(date).map(({ type, value }) => [type, value]),
+  );
+  return `${values.day} ${values.month} ${values.year} ${values.hour}:${values.minute}:${values.second}`;
 }
 
 function formatContentType(object) {
@@ -290,19 +316,23 @@ function formatContentType(object) {
     : "application/octet-stream";
 }
 
-function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken }) {
+function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken, displayTimeZone }) {
+  const uploadedFormatter = createUploadedFormatter(displayTimeZone);
+  const timeZoneLabel = displayTimeZone === DEFAULT_DISPLAY_TIME_ZONE
+    ? "GMT+8"
+    : displayTimeZone;
   const rows = objects.map((object) => {
     const requiredKey = requiredKeyFor(accessKeys, object.key);
     const href = objectHref(object.key, requiredKey);
     const visibility = requiredKey ? "Protected" : "Public";
     const type = escapeHtml(formatContentType(object));
     const size = escapeHtml(formatSize(object.size));
-    const uploaded = escapeHtml(formatUploaded(object.uploaded));
+    const uploaded = escapeHtml(formatUploaded(object.uploaded, uploadedFormatter));
     return `<li><a class="file-row" href="${escapeHtml(href)}" rel="noreferrer" title="${escapeHtml(object.key)}">
       <span class="file-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4V20H7Z"/><path d="M14 3.5V8h4M10 12h5M10 15h5"/></svg></span>
-      <span class="object-cell"><span class="object-name">${escapeHtml(object.key)}</span><span class="object-meta">${type} · ${size} · ${uploaded} UTC</span></span>
-      <span class="type-cell" title="${type}">${type}</span>
+      <span class="object-cell"><span class="object-name">${escapeHtml(object.key)}</span><span class="object-meta">${type} · ${size} · ${uploaded} ${escapeHtml(timeZoneLabel)}</span></span>
       <span class="access-badge ${requiredKey ? "protected" : "public"}">${visibility}</span>
+      <span class="type-cell" title="${type}">${type}</span>
       <span class="size-cell">${size}</span>
       <span class="date-cell">${uploaded}</span>
     </a></li>`;
@@ -321,11 +351,11 @@ function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken }) {
   const note = showAll
     ? `<p class="security-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="10" width="12" height="10" rx="2"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>Protected links contain an access key.</p>`
     : "";
-  const content = `<header class="page-header"><div><p class="eyebrow">${showAll ? "Authorized scope" : "Public scope"}</p><h1>${scope}</h1></div><span class="scope-chip">${showAll ? "All" : "Public"}</span></header>
+  const content = `<header class="page-header"><div><p class="eyebrow">${showAll ? "Authorized scope" : "Public scope"}</p><h1>${scope}</h1></div><span class="scope-chip">${showAll ? "Protected" : "Public"}</span></header>
     ${note}
-    ${rows ? `<section class="file-list" aria-label="${scope}"><div class="file-list-head" aria-hidden="true"><span></span><span>Object key</span><span>Type</span><span>Access</span><span>Size</span><span>Uploaded (UTC)</span></div><ul>${rows}</ul></section>` : `<p class="empty">${emptyMessage}</p>`}
+    ${rows ? `<section class="file-list" aria-label="${scope}"><div class="file-list-head" aria-hidden="true"><span></span><span>Object key</span><span>Access</span><span>Type</span><span>Size</span><span>Uploaded (${escapeHtml(timeZoneLabel)})</span></div><ul>${rows}</ul></section>` : `<p class="empty">${emptyMessage}</p>`}
     ${nextLink}`;
-  return appPage({ title: scope, activePage: "files", topMeta: showAll ? "All access" : "Public access", content });
+  return appPage({ title: scope, activePage: "files", topMeta: showAll ? "Protected access" : "Public access", content });
 }
 
 function rootPage() {
@@ -333,17 +363,21 @@ function rootPage() {
   return appPage({ title: "Status", activePage: "status", content });
 }
 
-function errorPage(status, message) {
-  const content = `<section class="status-view"><header class="page-header"><div><p class="eyebrow">Service error</p><h1>Status</h1></div></header><div class="status-card error"><span class="status-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5M12 17h.01"/><path d="M10.3 4.7 3.8 16a2 2 0 0 0 1.7 3h13a2 2 0 0 0 1.7-3L13.7 4.7a2 2 0 0 0-3.4 0Z"/></svg></span><div class="status-copy"><p class="status-message">${escapeHtml(message)}</p><p class="status-detail">Return to Status after resolving the error. Files navigation is disabled on this page.</p></div><span class="ready-badge">ERROR ${status}</span></div></section>`;
+function errorPage(status, messages) {
+  const issues = Array.isArray(messages) ? messages : [messages];
+  const issueContent = issues.length === 1
+    ? `<p class="status-message">${escapeHtml(issues[0])}</p>`
+    : `<p class="status-message">${issues.length} configuration issues found</p><ul class="status-issues">${issues.map((issue) => `<li>${escapeHtml(issue)}</li>`).join("")}</ul>`;
+  const content = `<section class="status-view"><header class="page-header"><div><p class="eyebrow">Service error</p><h1>Status</h1></div></header><div class="status-card error"><span class="status-check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5M12 17h.01"/><path d="M10.3 4.7 3.8 16a2 2 0 0 0 1.7 3h13a2 2 0 0 0 1.7-3L13.7 4.7a2 2 0 0 0-3.4 0Z"/></svg></span><div class="status-copy">${issueContent}<p class="status-detail">Return to Status after resolving the error. Files navigation is disabled on this page.</p></div><span class="ready-badge">ERROR ${status}</span></div></section>`;
   return appPage({ title: `Error ${status}`, activePage: "status", content, filesEnabled: false });
 }
 
-function errorResponse(status, message, isHead = false, extraHeaders = {}) {
+function errorResponse(status, messages, isHead = false, extraHeaders = {}) {
   const headers = new Headers(ERROR_HEADERS);
   for (const [name, value] of Object.entries(extraHeaders)) {
     headers.set(name, value);
   }
-  return new Response(isHead ? null : errorPage(status, message), { status, headers });
+  return new Response(isHead ? null : errorPage(status, messages), { status, headers });
 }
 
 export default {
@@ -364,35 +398,54 @@ export default {
       });
     }
 
+    const configurationIssues = [];
     if (
       !env.BUCKET ||
       typeof env.BUCKET.get !== "function" ||
       typeof env.BUCKET.head !== "function"
     ) {
-      return errorResponse(500, "R2 bucket binding is not configured", isHead);
-    }
-
-    if (typeof env.ACCESS_KEYS !== "string" || !env.ACCESS_KEYS.trim()) {
-      return errorResponse(500, "ACCESS_KEYS variable is not configured", isHead);
-    }
-
-    if (typeof env.BROWSE_UUID !== "string" || !env.BROWSE_UUID.trim()) {
-      return errorResponse(500, "BROWSE_UUID variable is not configured", isHead);
+      configurationIssues.push("R2 bucket binding is not configured");
     }
 
     let accessKeys;
-    try {
-      accessKeys = JSON.parse(env.ACCESS_KEYS);
-      if (
-        accessKeys === null ||
-        Array.isArray(accessKeys) ||
-        typeof accessKeys !== "object" ||
-        Object.values(accessKeys).some((value) => typeof value !== "string")
-      ) {
-        throw new Error();
+    if (typeof env.ACCESS_KEYS !== "string" || !env.ACCESS_KEYS.trim()) {
+      configurationIssues.push("ACCESS_KEYS variable is not configured");
+    } else {
+      try {
+        accessKeys = JSON.parse(env.ACCESS_KEYS);
+        if (
+          accessKeys === null ||
+          Array.isArray(accessKeys) ||
+          typeof accessKeys !== "object" ||
+          Object.values(accessKeys).some((value) => typeof value !== "string")
+        ) {
+          throw new Error();
+        }
+      } catch {
+        configurationIssues.push("Invalid ACCESS_KEYS configuration");
       }
+    }
+
+    if (typeof env.BROWSE_UUID !== "string" || !env.BROWSE_UUID.trim()) {
+      configurationIssues.push("BROWSE_UUID variable is not configured");
+    }
+
+    let displayTimeZone = DEFAULT_DISPLAY_TIME_ZONE;
+    if (env.DISPLAY_TIME_ZONE !== undefined && env.DISPLAY_TIME_ZONE !== null) {
+      if (typeof env.DISPLAY_TIME_ZONE !== "string" || !env.DISPLAY_TIME_ZONE.trim()) {
+        configurationIssues.push("Invalid DISPLAY_TIME_ZONE configuration");
+      } else {
+        displayTimeZone = env.DISPLAY_TIME_ZONE.trim();
+      }
+    }
+    try {
+      createUploadedFormatter(displayTimeZone);
     } catch {
-      return errorResponse(500, "Invalid ACCESS_KEYS configuration", isHead);
+      configurationIssues.push("Invalid DISPLAY_TIME_ZONE configuration");
+    }
+
+    if (configurationIssues.length) {
+      return errorResponse(500, [...new Set(configurationIssues)], isHead);
     }
 
     if (url.pathname === "/") {
@@ -470,6 +523,7 @@ export default {
           showAll,
           nextCursor,
           nextToken,
+          displayTimeZone,
         });
         return new Response(body, { headers: FILES_HEADERS });
       } catch (error) {

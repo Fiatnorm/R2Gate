@@ -14,11 +14,14 @@
 - `pages-dist/_worker.js` 是 Pages Direct Upload 入口。
 - 修改运行时行为时必须同步这两个文件，并验证内容完全一致。
 - 根路径必须先验证 `BUCKET` Binding、`ACCESS_KEYS` 和 `BROWSE_UUID` 普通文本变量；三者有效时才返回英文 `R2Gate is running successfully.`。
+- 配置检查必须一次收集并显示全部已发现问题，不得只返回第一个问题。
+- `DISPLAY_TIME_ZONE` 是可选普通文本变量，默认使用 `Asia/Singapore`；必须接受有效 IANA 时区并将 Files 上传时间精确到秒。
 - `/_files` 只列出不需要密钥的对象；`/_files?uuid=<UUID>` 验证 `BROWSE_UUID` 后列出全部对象，并为受保护对象生成携带现有 `key` 参数的链接。
+- 保留 `/<Object Key>?key=<访问密钥>` 直链和 `/_files?object=<Object Key>&key=<访问密钥>` 查询页链接，两者必须沿用相同鉴权；不得把首个查询分隔符 `?` 改为 `&`。
 - 文件查询必须使用 R2 cursor 分页，每次 `BUCKET.list()` 最多读取 200 个对象；不得按文件额外调用 `get()` 或 `head()` 获取列表元数据。
 - 全部文件查询的后续页必须使用 `BROWSE_UUID` 签发的 cursor 专用 HMAC 令牌，不得在分页链接中重复 UUID。
 - 查询页不得缓存或向 Referer 泄露 UUID；Object Key 必须进行 HTML 转义和 URL 编码，不得把 UUID 显示在页面正文中。
-- `/` Status 与 `/_files` Files 必须保持为两个独立页面，共用 Material Design 3 深色样式、橙色数据库图标和 Status / Files / GitHub 左侧导航；Files 使用紧凑列表，不在页面之间混入对方的主体内容。
+- `/` Status 与 `/_files` Files 必须保持为两个独立页面，共用 Material Design 3 深色样式、橙色数据库图标和 Status / Files / License / GitHub 左侧导航；License 固定指向 `https://raw.githubusercontent.com/Fiatnorm/R2Gate/refs/heads/main/LICENSE`。Files 使用 Object Key / Access / Type / Size / Uploaded 顺序的紧凑列表，不在页面之间混入对方的主体内容。
 - Pages 上传只能使用 `pages-dist`，不得上传仓库根目录。
 
 ## Python

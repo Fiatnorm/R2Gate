@@ -25,16 +25,22 @@ function makeListedObject(key, size = 128) {
 }
 
 
-async function assertErrorPage(response, status, message) {
+async function assertErrorPage(response, status, messages) {
+  const expectedMessages = Array.isArray(messages) ? messages : [messages];
   assert.equal(response.status, status);
   assert.match(response.headers.get("content-type"), /^text\/html/);
   assert.equal(response.headers.get("cache-control"), "private, no-store");
   const body = await response.text();
   assert.match(body, /<h1>Status<\/h1>/);
-  assert.ok(body.includes(message));
+  for (const message of expectedMessages) assert.ok(body.includes(message));
+  if (expectedMessages.length > 1) {
+    assert.ok(body.includes(`${expectedMessages.length} configuration issues found`));
+    assert.equal((body.match(/<li>/g) || []).length, expectedMessages.length);
+  }
   assert.match(body, new RegExp(`ERROR ${status}`));
   assert.match(body, /class="nav-item disabled" aria-disabled="true"[\s\S]*Files/);
   assert.doesNotMatch(body, /href="\/_files"/);
+  assert.match(body, /href="https:\/\/raw\.githubusercontent\.com\/Fiatnorm\/R2Gate\/refs\/heads\/main\/LICENSE" target="_blank" rel="noopener noreferrer"/);
 }
 
 
@@ -73,11 +79,18 @@ function makeBucket({
 
 test("root reports deployment configuration", async () => {
   let response = await worker.fetch(new Request("https://example.com/"), {});
-  await assertErrorPage(response, 500, "R2 bucket binding is not configured");
+  await assertErrorPage(response, 500, [
+    "R2 bucket binding is not configured",
+    "ACCESS_KEYS variable is not configured",
+    "BROWSE_UUID variable is not configured",
+  ]);
 
   const bucket = makeBucket();
   response = await worker.fetch(new Request("https://example.com/"), { BUCKET: bucket });
-  await assertErrorPage(response, 500, "ACCESS_KEYS variable is not configured");
+  await assertErrorPage(response, 500, [
+    "ACCESS_KEYS variable is not configured",
+    "BROWSE_UUID variable is not configured",
+  ]);
 
   response = await worker.fetch(new Request("https://example.com/"), {
     BUCKET: bucket,
@@ -101,6 +114,17 @@ test("root reports deployment configuration", async () => {
 
   response = await worker.fetch(new Request("https://example.com/"), {
     BUCKET: bucket,
+    ACCESS_KEYS: "not-json",
+    DISPLAY_TIME_ZONE: "Not/A_Time_Zone",
+  });
+  await assertErrorPage(response, 500, [
+    "Invalid ACCESS_KEYS configuration",
+    "BROWSE_UUID variable is not configured",
+    "Invalid DISPLAY_TIME_ZONE configuration",
+  ]);
+
+  response = await worker.fetch(new Request("https://example.com/"), {
+    BUCKET: bucket,
     ACCESS_KEYS: "{}",
     BROWSE_UUID: "browse-uuid",
   });
@@ -114,6 +138,7 @@ test("root reports deployment configuration", async () => {
   assert.match(body, /class="nav-item active" aria-current="page"[\s\S]*Status/);
   assert.match(body, /href="\/_files"[\s\S]*Files/);
   assert.match(body, /href="https:\/\/github\.com\/Fiatnorm\/R2Gate" target="_blank" rel="noopener noreferrer"/);
+  assert.match(body, /href="https:\/\/raw\.githubusercontent\.com\/Fiatnorm\/R2Gate\/refs\/heads\/main\/LICENSE" target="_blank" rel="noopener noreferrer"/);
   assert.match(body, /href="\/favicon\.svg"/);
   assert.match(body, /id="brand-orange"/);
   assert.doesNotMatch(body, /class="file-list"/);
@@ -216,12 +241,14 @@ test("public file listing excludes protected objects and safely links exact keys
   const body = await response.text();
   assert.match(body, /Public files/);
   assert.match(body, /class="file-list"/);
-  assert.match(body, /<span>Object key<\/span><span>Type<\/span><span>Access<\/span><span>Size<\/span><span>Uploaded \(UTC\)<\/span>/);
+  assert.match(body, /<span>Object key<\/span><span>Access<\/span><span>Type<\/span><span>Size<\/span><span>Uploaded \(GMT\+8\)<\/span>/);
   assert.match(body, /text\/plain/);
-  assert.match(body, /2026-08-25 00:00:00/);
+  assert.match(body, /25 Aug 2026 08:00:00/);
+  assert.doesNotMatch(body, /Uploaded \(UTC\)| UTC/);
   assert.doesNotMatch(body, />Open<|open-icon/);
   assert.match(body, /class="nav-item active" aria-current="page"[\s\S]*Files/);
   assert.match(body, /href="https:\/\/github\.com\/Fiatnorm\/R2Gate" target="_blank" rel="noopener noreferrer"/);
+  assert.match(body, /href="https:\/\/raw\.githubusercontent\.com\/Fiatnorm\/R2Gate\/refs\/heads\/main\/LICENSE" target="_blank" rel="noopener noreferrer"/);
   assert.doesNotMatch(body, /R2Gate is running successfully\./);
   assert.match(body, /href="\/_files\?object=public\.txt"/);
   assert.doesNotMatch(body, /private\.txt/);
@@ -237,6 +264,21 @@ test("public file listing excludes protected objects and safely links exact keys
   assert.equal(response.status, 200);
   assert.equal(await response.text(), `body:${unusualKey}`);
   assert.deepEqual(bucket.calls.get, [unusualKey]);
+});
+
+
+test("file listing supports an optional IANA display time zone", async () => {
+  const bucket = makeBucket({ listed: [makeListedObject("public.txt")] });
+  const response = await worker.fetch(new Request("https://example.com/_files"), {
+    BUCKET: bucket,
+    ACCESS_KEYS: "{}",
+    BROWSE_UUID: "browse-uuid",
+    DISPLAY_TIME_ZONE: "America/New_York",
+  });
+  assert.equal(response.status, 200);
+  const body = await response.text();
+  assert.match(body, /Uploaded \(America\/New_York\)/);
+  assert.match(body, /24 Aug 2026 20:00:00/);
 });
 
 
@@ -275,8 +317,9 @@ test("UUID listing requires the configured variable and creates working keyed li
   assert.equal(response.status, 200);
   const body = await response.text();
   assert.match(body, /All files/);
-  assert.match(body, /<span class="scope-chip">All<\/span>/);
-  assert.doesNotMatch(body, /Public \+ Protected/);
+  assert.match(body, /<span class="scope-chip">Protected<\/span>/);
+  assert.match(body, /Protected access/);
+  assert.doesNotMatch(body, /<span class="scope-chip">All<\/span>|Public \+ Protected/);
   assert.match(body, /Protected links contain an access key\./);
   assert.match(body, /public\.txt/);
   assert.match(body, /private\.txt/);
