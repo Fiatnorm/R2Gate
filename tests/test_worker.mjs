@@ -7,7 +7,7 @@ import worker from "../worker.mjs";
 function makeObject(key) {
   return {
     body: `body:${key}`,
-    httpEtag: `etag-${key}`,
+    httpEtag: `etag-${encodeURIComponent(key)}`,
     writeHttpMetadata(headers) {
       headers.set("content-type", "text/plain");
     },
@@ -30,6 +30,9 @@ async function assertErrorPage(response, status, messages) {
   assert.equal(response.status, status);
   assert.match(response.headers.get("content-type"), /^text\/html/);
   assert.equal(response.headers.get("cache-control"), "private, no-store");
+  assert.equal(response.headers.get("access-control-allow-origin"), "*");
+  assert.equal(response.headers.get("access-control-allow-methods"), "GET, HEAD, OPTIONS");
+  assert.equal(response.headers.get("access-control-max-age"), "86400");
   const body = await response.text();
   assert.match(body, /<h1>Status<\/h1>/);
   for (const message of expectedMessages) assert.ok(body.includes(message));
@@ -112,6 +115,26 @@ test("root reports deployment configuration", async () => {
   });
   await assertErrorPage(response, 500, "Invalid ACCESS_KEYS configuration");
 
+  for (const invalidAccessKeys of [
+    { "private.txt": "" },
+    { "": "file-key" },
+    { "private.txt": "x".repeat(4097) },
+  ]) {
+    response = await worker.fetch(new Request("https://example.com/"), {
+      BUCKET: bucket,
+      ACCESS_KEYS: JSON.stringify(invalidAccessKeys),
+      BROWSE_UUID: "browse-uuid",
+    });
+    await assertErrorPage(response, 500, "Invalid ACCESS_KEYS configuration");
+  }
+
+  response = await worker.fetch(new Request("https://example.com/"), {
+    BUCKET: bucket,
+    ACCESS_KEYS: "{}",
+    BROWSE_UUID: "x".repeat(129),
+  });
+  await assertErrorPage(response, 500, "Invalid BROWSE_UUID configuration");
+
   response = await worker.fetch(new Request("https://example.com/"), {
     BUCKET: bucket,
     ACCESS_KEYS: "not-json",
@@ -158,6 +181,7 @@ test("favicon is available without R2 configuration", async () => {
   let response = await worker.fetch(new Request("https://example.com/favicon.svg"), {});
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type"), /^image\/svg\+xml/);
+  assert.equal(response.headers.get("access-control-allow-origin"), "*");
   assert.match(await response.text(), /^<svg[\s\S]*<\/svg>$/);
 
   response = await worker.fetch(
@@ -169,7 +193,28 @@ test("favicon is available without R2 configuration", async () => {
 });
 
 
-test("file access handles keys, GET, HEAD, 404, and 405", async () => {
+test("OPTIONS returns global CORS headers without touching configuration", async () => {
+  const response = await worker.fetch(
+    new Request("https://example.com/private.txt?key=unverified", {
+      method: "OPTIONS",
+      headers: {
+        Origin: "https://optidomain.example",
+        "Access-Control-Request-Method": "GET",
+      },
+    }),
+    {},
+  );
+
+  assert.equal(response.status, 204);
+  assert.equal(await response.text(), "");
+  assert.equal(response.headers.get("allow"), "GET, HEAD, OPTIONS");
+  assert.equal(response.headers.get("access-control-allow-origin"), "*");
+  assert.equal(response.headers.get("access-control-allow-methods"), "GET, HEAD, OPTIONS");
+  assert.equal(response.headers.get("access-control-max-age"), "86400");
+});
+
+
+test("file access handles CORS, keys, downloads, GET, HEAD, 404, and 405", async () => {
   const bucket = makeBucket({ missing: ["missing.txt"] });
   const env = {
     BUCKET: bucket,
@@ -188,6 +233,61 @@ test("file access handles keys, GET, HEAD, 404, and 405", async () => {
   assert.equal(response.status, 200);
   assert.equal(await response.text(), "body:private.txt");
   assert.equal(response.headers.get("etag"), "etag-private.txt");
+  assert.equal(response.headers.get("access-control-allow-origin"), "*");
+
+  response = await worker.fetch(
+    new Request("https://example.com/public.txt?download=1"),
+    env,
+  );
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-disposition"), "attachment; filename=\"public.txt\"; filename*=UTF-8''public.txt");
+  assert.equal(await response.text(), "body:public.txt");
+
+  response = await worker.fetch(
+    new Request("https://example.com/_files?object=private.txt&key=file-key&download=1"),
+    env,
+  );
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-disposition"), "attachment; filename=\"private.txt\"; filename*=UTF-8''private.txt");
+  assert.equal(response.headers.get("access-control-allow-origin"), "*");
+  assert.equal(await response.text(), "body:private.txt");
+
+  response = await worker.fetch(
+    new Request("https://example.com/_files?object=folder%2F%E6%8A%A5%E5%91%8A%20%22Q%22.txt&download=1"),
+    env,
+  );
+  assert.equal(response.status, 200);
+  assert.equal(
+    response.headers.get("content-disposition"),
+    "attachment; filename=\"__ _Q_.txt\"; filename*=UTF-8''%E6%8A%A5%E5%91%8A%20%22Q%22.txt",
+  );
+
+  response = await worker.fetch(
+    new Request("https://example.com/folder/%E6%8A%A5%E5%91%8A%20%22Q%22.txt"),
+    env,
+  );
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), 'body:folder/报告 "Q".txt');
+
+  const readsBeforeInvalidPath = bucket.calls.get.length;
+  response = await worker.fetch(new Request("https://example.com/bad%ZZpath"), env);
+  await assertErrorPage(response, 400, "Bad Request");
+  assert.equal(bucket.calls.get.length, readsBeforeInvalidPath);
+
+  const readsBeforeInvalidDownload = bucket.calls.get.length;
+  response = await worker.fetch(
+    new Request("https://example.com/public.txt?download=0"),
+    env,
+  );
+  await assertErrorPage(response, 400, "Bad Request");
+  assert.equal(bucket.calls.get.length, readsBeforeInvalidDownload);
+
+  response = await worker.fetch(
+    new Request("https://example.com/public.txt?download=1&download=1"),
+    env,
+  );
+  await assertErrorPage(response, 400, "Bad Request");
+  assert.equal(bucket.calls.get.length, readsBeforeInvalidDownload);
 
   const readsAfterAuthorizedGet = bucket.calls.get.length;
   response = await worker.fetch(
@@ -205,6 +305,14 @@ test("file access handles keys, GET, HEAD, 404, and 405", async () => {
   assert.equal(await response.text(), "");
   assert.deepEqual(bucket.calls.head, ["private.txt"]);
 
+  response = await worker.fetch(
+    new Request("https://example.com/private.txt?key=file-key&download=1", { method: "HEAD" }),
+    env,
+  );
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-disposition"), "attachment; filename=\"private.txt\"; filename*=UTF-8''private.txt");
+  assert.equal(await response.text(), "");
+
   response = await worker.fetch(new Request("https://example.com/missing.txt"), env);
   await assertErrorPage(response, 404, "Not Found");
 
@@ -213,7 +321,7 @@ test("file access handles keys, GET, HEAD, 404, and 405", async () => {
     env,
   );
   await assertErrorPage(response, 405, "Method Not Allowed");
-  assert.equal(response.headers.get("allow"), "GET, HEAD");
+  assert.equal(response.headers.get("allow"), "GET, HEAD, OPTIONS");
 });
 
 
@@ -255,12 +363,13 @@ test("public file listing excludes protected objects and safely links exact keys
   assert.equal(response.headers.get("cache-control"), "private, no-store");
   assert.equal(response.headers.get("referrer-policy"), "no-referrer");
   assert.equal(response.headers.get("x-robots-tag"), "noindex, nofollow, noarchive");
+  assert.equal(response.headers.get("access-control-allow-origin"), "*");
   const body = await response.text();
   assert.match(body, /Public files/);
   assert.match(body, /class="files-view"/);
   assert.match(body, /\.files-view, \.status-view \{ width: min\(960px, 100%\); margin: 0 auto; \}/);
   assert.match(body, /class="file-list"/);
-  assert.match(body, /<span>Object key<\/span><span>Access<\/span><span>Type<\/span><span>Size<\/span><span>Uploaded \(GMT\+8\)<\/span>/);
+  assert.match(body, /<span>Object key<\/span><span>Access<\/span><span>Type<\/span><span>Size<\/span><span>Uploaded \(GMT\+8\)<\/span><\/span><span>Download<\/span>/);
   assert.match(body, /text\/plain/);
   assert.match(body, /25 Aug 2026 08:00:00/);
   assert.doesNotMatch(body, /Uploaded \(UTC\)| UTC/);
@@ -270,10 +379,12 @@ test("public file listing excludes protected objects and safely links exact keys
   assert.match(body, /href="https:\/\/raw\.githubusercontent\.com\/Fiatnorm\/R2Gate\/refs\/heads\/main\/LICENSE" target="_blank" rel="noopener noreferrer"/);
   assert.doesNotMatch(body, /R2Gate is running successfully\./);
   assert.match(body, /href="\/_files\?object=public\.txt"/);
+  assert.match(body, /href="\/_files\?object=public\.txt&amp;download=1" download="public\.txt"/);
   assert.doesNotMatch(body, /private\.txt/);
   assert.doesNotMatch(body, /<script>/);
   assert.match(body, /folder\/&lt;script&gt;&amp; \?\.txt/);
   assert.match(body, /object=folder%2F%3Cscript%3E%26\+%3F\.txt/);
+  assert.match(body, /object=folder%2F%3Cscript%3E%26\+%3F\.txt&amp;download=1/);
   assert.deepEqual(bucket.calls.list, [{ limit: 200, include: ["httpMetadata"] }]);
 
   response = await worker.fetch(
@@ -343,8 +454,15 @@ test("UUID listing requires the configured variable and creates working keyed li
   assert.match(body, /public\.txt/);
   assert.match(body, /private\.txt/);
   assert.match(body, /href="\/_files\?object=private\.txt&amp;key=file-key%26value"/);
+  assert.match(body, /href="\/_files\?object=private\.txt&amp;key=file-key%26value&amp;download=1" download="private\.txt"/);
   assert.doesNotMatch(body, /file-key&amp;value/);
   assert.doesNotMatch(body, /browse-uuid/);
+
+  response = await worker.fetch(
+    new Request("https://example.com/_files?download=1"),
+    env,
+  );
+  await assertErrorPage(response, 400, "Bad Request");
 
   response = await worker.fetch(
     new Request("https://example.com/_files?object=private.txt"),
@@ -469,10 +587,38 @@ test("file listing uses bounded cursor pagination and controls R2 errors", async
   );
   await assertErrorPage(response, 400, "Bad Request");
 
+  const invalidPaginationBuckets = [
+    makeBucket({
+      listPages: { "": { objects: [], truncated: true } },
+    }),
+    makeBucket({
+      listPages: {
+        repeated: { objects: [], truncated: true, cursor: "repeated" },
+      },
+    }),
+  ];
+
   const failingBucket = makeBucket({ listFailing: true });
   const originalError = console.error;
   console.error = () => {};
   try {
+    response = await worker.fetch(new Request("https://example.com/_files"), {
+      BUCKET: invalidPaginationBuckets[0],
+      ACCESS_KEYS: "{}",
+      BROWSE_UUID: "browse-uuid",
+    });
+    await assertErrorPage(response, 500, "Internal Server Error");
+
+    response = await worker.fetch(
+      new Request("https://example.com/_files?cursor=repeated"),
+      {
+        BUCKET: invalidPaginationBuckets[1],
+        ACCESS_KEYS: "{}",
+        BROWSE_UUID: "browse-uuid",
+      },
+    );
+    await assertErrorPage(response, 500, "Internal Server Error");
+
     response = await worker.fetch(new Request("https://example.com/_files"), {
       BUCKET: failingBucket,
       ACCESS_KEYS: "{}",

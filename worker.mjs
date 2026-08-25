@@ -4,9 +4,16 @@ const LICENSE_URL = "https://raw.githubusercontent.com/Fiatnorm/R2Gate/refs/head
 const FILES_PATH = "/_files";
 const FILES_PER_PAGE = 200;
 const MAX_QUERY_VALUE_LENGTH = 4096;
+const MAX_TOKEN_LENGTH = 128;
+const TEXT_ENCODER = new TextEncoder();
 // Optional Cloudflare Plaintext variable: set DISPLAY_TIME_ZONE to another
 // IANA time zone (for example, "Europe/London") to change uploaded-time display.
 const DEFAULT_DISPLAY_TIME_ZONE = "Asia/Singapore";
+const CORS_HEADERS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, HEAD, OPTIONS",
+  "access-control-max-age": "86400",
+};
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
     <linearGradient id="orange" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
@@ -28,6 +35,7 @@ const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"
 </svg>`;
 
 const PAGE_HEADERS = {
+  ...CORS_HEADERS,
   "content-security-policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
   "content-type": "text/html; charset=utf-8",
   "referrer-policy": "no-referrer",
@@ -110,13 +118,15 @@ const APP_STYLES = `
     .security-note { display: flex; align-items: center; gap: 12px; min-height: 52px; margin: 0 0 20px; padding: 12px 16px; border-radius: 16px; background: var(--warning-container); color: #ffe38a; font-size: 14px; font-weight: 650; }
     .security-note svg { width: 21px; height: 21px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
     .file-list { overflow: hidden; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); }
-    .file-list-head, .file-row { display: grid; grid-template-columns: 36px minmax(220px, 1fr) 104px 144px 84px 184px; align-items: center; column-gap: 14px; }
+    .file-list-head, .file-row { display: grid; grid-template-columns: minmax(0, 1fr) 108px; align-items: center; column-gap: 12px; }
     .file-list-head { min-height: 44px; padding: 0 16px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-high); color: var(--primary); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-    .file-list-head > span:nth-child(n+3) { justify-self: center; text-align: center; }
+    .file-list-head-main, .file-open { display: grid; grid-template-columns: 36px minmax(180px, 1fr) 96px 128px 76px 168px; align-items: center; column-gap: 12px; min-width: 0; }
+    .file-list-head-main > span:nth-child(n+3), .file-list-head > span:last-child { justify-self: center; text-align: center; }
     .file-list ul { margin: 0; padding: 0; list-style: none; }
     .file-list li + li { border-top: 1px solid var(--outline-variant); }
-    .file-row { min-height: 64px; padding: 8px 16px; color: var(--on-surface); text-decoration: none; transition: background-color 160ms ease; }
+    .file-row { min-height: 64px; padding: 0 16px; color: var(--on-surface); transition: background-color 160ms ease; }
     .file-row:hover { background: var(--surface-container-high); }
+    .file-open { align-self: stretch; min-height: 64px; padding: 8px 0; color: var(--on-surface); text-decoration: none; }
     .file-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--surface-container-highest); color: var(--on-surface-variant); }
     .file-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
     .object-cell { min-width: 0; }
@@ -127,6 +137,10 @@ const APP_STYLES = `
     .access-badge.protected { background: #54470f; color: #ffe37d; }
     .type-cell { max-width: 100%; overflow: hidden; color: var(--on-surface-variant); font-size: 13px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
     .size-cell, .date-cell { justify-self: center; color: var(--on-surface-variant); font-size: 13px; font-variant-numeric: tabular-nums; text-align: center; }
+    .download-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 999px; background: var(--primary-container); color: var(--on-primary-container); text-decoration: none; font-size: 12px; font-weight: 760; transition: filter 160ms ease, transform 160ms ease; }
+    .download-button svg { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .download-button:hover { filter: brightness(1.08); }
+    .download-button:active { transform: scale(.97); }
     .empty { display: grid; place-items: center; min-height: 180px; margin: 0; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); color: var(--on-surface-variant); }
     .pagination { display: flex; justify-content: end; margin-top: 20px; }
     .next-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 0 22px; border-radius: 999px; background: var(--primary); color: var(--on-primary); text-decoration: none; font-size: 14px; font-weight: 760; transition: filter 160ms ease, transform 160ms ease; }
@@ -135,11 +149,14 @@ const APP_STYLES = `
     :focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
     @media (max-width: 980px) {
       .file-list-head { display: none; }
-      .file-row { grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; min-height: 82px; padding: 12px 14px; }
+      .file-row { grid-template-columns: minmax(0, 1fr) 44px; gap: 8px; min-height: 82px; padding: 0 14px; }
+      .file-open { grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; min-height: 82px; padding: 12px 0; }
       .file-icon { width: 36px; height: 36px; }
       .object-meta { display: block; }
       .type-cell, .size-cell, .date-cell { display: none; }
       .access-badge { min-height: 30px; padding: 0 9px; font-size: 11px; }
+      .download-button { width: 44px; height: 44px; padding: 0; }
+      .download-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     }
     @media (max-width: 760px) {
       .topbar { height: 64px; padding: 0 16px; }
@@ -225,7 +242,7 @@ function appPage({ title, activePage, topMeta = "", content, filesEnabled = true
 </html>`;
 }
 
-function timingSafeEqual(left, right, maxLength = 128) {
+function timingSafeEqual(left, right, maxLength = MAX_TOKEN_LENGTH) {
   if (
     typeof left !== "string" ||
     typeof right !== "string" ||
@@ -235,8 +252,8 @@ function timingSafeEqual(left, right, maxLength = 128) {
     return false;
   }
 
-  const leftBytes = new TextEncoder().encode(left);
-  const rightBytes = new TextEncoder().encode(right);
+  const leftBytes = TEXT_ENCODER.encode(left);
+  const rightBytes = TEXT_ENCODER.encode(right);
   const length = Math.max(leftBytes.length, rightBytes.length);
   let difference = leftBytes.length ^ rightBytes.length;
 
@@ -248,15 +265,14 @@ function timingSafeEqual(left, right, maxLength = 128) {
 }
 
 async function cursorAccessToken(secret, cursor) {
-  const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
-    encoder.encode(secret),
+    TEXT_ENCODER.encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
   );
-  const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(cursor)));
+  const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, TEXT_ENCODER.encode(cursor)));
   const binary = String.fromCharCode(...signature);
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
@@ -271,6 +287,31 @@ function objectHref(objectKey, requiredKey) {
     params.set("key", requiredKey);
   }
   return `${FILES_PATH}?${params}`;
+}
+
+function objectDownloadHref(objectKey, requiredKey) {
+  const params = new URLSearchParams({ object: objectKey });
+  if (requiredKey) {
+    params.set("key", requiredKey);
+  }
+  params.set("download", "1");
+  return `${FILES_PATH}?${params}`;
+}
+
+function objectFilename(objectKey) {
+  return String(objectKey).split("/").pop() || "download";
+}
+
+function contentDisposition(objectKey) {
+  const filename = objectFilename(objectKey);
+  const fallback = filename
+    .replace(/[^\x20-\x7e]/g, "_")
+    .replace(/["\\]/g, "_")
+    .trim() || "download";
+  const encoded = encodeURIComponent(filename).replace(/[!'()*]/g, (character) =>
+    `%${character.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+  return `attachment; filename="${fallback}"; filename*=UTF-8''${encoded}`;
 }
 
 function formatSize(size) {
@@ -325,18 +366,20 @@ function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken, displa
   const rows = objects.map((object) => {
     const requiredKey = requiredKeyFor(accessKeys, object.key);
     const href = objectHref(object.key, requiredKey);
+    const downloadHref = objectDownloadHref(object.key, requiredKey);
+    const filename = objectFilename(object.key);
     const visibility = requiredKey ? "Protected" : "Public";
     const type = escapeHtml(formatContentType(object));
     const size = escapeHtml(formatSize(object.size));
     const uploaded = escapeHtml(formatUploaded(object.uploaded, uploadedFormatter));
-    return `<li><a class="file-row" href="${escapeHtml(href)}" rel="noreferrer" title="${escapeHtml(object.key)}">
+    return `<li class="file-row"><a class="file-open" href="${escapeHtml(href)}" rel="noreferrer" title="${escapeHtml(object.key)}">
       <span class="file-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4V20H7Z"/><path d="M14 3.5V8h4M10 12h5M10 15h5"/></svg></span>
       <span class="object-cell"><span class="object-name">${escapeHtml(object.key)}</span><span class="object-meta">${type} · ${size} · ${uploaded} ${escapeHtml(timeZoneLabel)}</span></span>
       <span class="access-badge ${requiredKey ? "protected" : "public"}">${visibility}</span>
       <span class="type-cell" title="${type}">${type}</span>
       <span class="size-cell">${size}</span>
       <span class="date-cell">${uploaded}</span>
-    </a></li>`;
+    </a><a class="download-button" href="${escapeHtml(downloadHref)}" download="${escapeHtml(filename)}" rel="noreferrer" aria-label="Download ${escapeHtml(object.key)}" title="Download ${escapeHtml(object.key)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5 4.5-4.5"/><path d="M5 20h14"/></svg><span class="download-label">Download</span></a></li>`;
   }).join("");
 
   let nextLink = "";
@@ -354,7 +397,7 @@ function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken, displa
     : "";
   const content = `<section class="files-view"><header class="page-header"><div><p class="eyebrow">${showAll ? "Authorized scope" : "Public scope"}</p><h1>${scope}</h1></div><span class="scope-chip">${showAll ? "Protected" : "Public"}</span></header>
     ${note}
-    ${rows ? `<section class="file-list" aria-label="${scope}"><div class="file-list-head" aria-hidden="true"><span></span><span>Object key</span><span>Access</span><span>Type</span><span>Size</span><span>Uploaded (${escapeHtml(timeZoneLabel)})</span></div><ul>${rows}</ul></section>` : `<p class="empty">${emptyMessage}</p>`}
+    ${rows ? `<section class="file-list" aria-label="${scope}"><div class="file-list-head" aria-hidden="true"><span class="file-list-head-main"><span></span><span>Object key</span><span>Access</span><span>Type</span><span>Size</span><span>Uploaded (${escapeHtml(timeZoneLabel)})</span></span><span>Download</span></div><ul>${rows}</ul></section>` : `<p class="empty">${emptyMessage}</p>`}
     ${nextLink}</section>`;
   return appPage({ title: scope, activePage: "files", topMeta: showAll ? "Protected access" : "Public access", content });
 }
@@ -383,9 +426,16 @@ function errorResponse(status, messages, isHead = false, extraHeaders = {}) {
 
 export default {
   async fetch(request, env) {
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: { ...CORS_HEADERS, allow: "GET, HEAD, OPTIONS" },
+      });
+    }
+
     const isHead = request.method === "HEAD";
     if (request.method !== "GET" && request.method !== "HEAD") {
-      return errorResponse(405, "Method Not Allowed", false, { allow: "GET, HEAD" });
+      return errorResponse(405, "Method Not Allowed", false, { allow: "GET, HEAD, OPTIONS" });
     }
 
     const url = new URL(request.url);
@@ -393,6 +443,7 @@ export default {
     if (url.pathname === "/favicon.svg" || url.pathname === "/favicon.ico") {
       return new Response(isHead ? null : FAVICON_SVG, {
         headers: {
+          ...CORS_HEADERS,
           "cache-control": "public, max-age=86400",
           "content-type": "image/svg+xml; charset=utf-8",
         },
@@ -419,7 +470,13 @@ export default {
           accessKeys === null ||
           Array.isArray(accessKeys) ||
           typeof accessKeys !== "object" ||
-          Object.values(accessKeys).some((value) => typeof value !== "string")
+          Object.entries(accessKeys).some(([objectKey, value]) =>
+            !objectKey ||
+            objectKey.length > MAX_QUERY_VALUE_LENGTH ||
+            typeof value !== "string" ||
+            !value ||
+            value.length > MAX_QUERY_VALUE_LENGTH
+          )
         ) {
           throw new Error();
         }
@@ -430,6 +487,8 @@ export default {
 
     if (typeof env.BROWSE_UUID !== "string" || !env.BROWSE_UUID.trim()) {
       configurationIssues.push("BROWSE_UUID variable is not configured");
+    } else if (env.BROWSE_UUID.length > MAX_TOKEN_LENGTH) {
+      configurationIssues.push("Invalid BROWSE_UUID configuration");
     }
 
     let displayTimeZone = DEFAULT_DISPLAY_TIME_ZONE;
@@ -458,6 +517,9 @@ export default {
     }
 
     if (url.pathname === FILES_PATH && !url.searchParams.has("object")) {
+      if (url.searchParams.has("download")) {
+        return errorResponse(400, "Bad Request", isHead);
+      }
       const uuidValues = url.searchParams.getAll("uuid");
       const tokenValues = url.searchParams.getAll("token");
       const cursorValues = url.searchParams.getAll("cursor");
@@ -465,7 +527,7 @@ export default {
         cursorValues.length > 1 ||
         tokenValues.length > 1 ||
         (cursorValues.length === 1 && cursorValues[0].length > MAX_QUERY_VALUE_LENGTH) ||
-        (tokenValues.length === 1 && tokenValues[0].length > 128)
+        (tokenValues.length === 1 && tokenValues[0].length > MAX_TOKEN_LENGTH)
       ) {
         return errorResponse(400, "Bad Request", isHead);
       }
@@ -510,9 +572,18 @@ export default {
           }
           return showAll || !requiredKeyFor(accessKeys, object.key);
         });
-        const nextCursor = result.truncated && typeof result.cursor === "string"
-          ? result.cursor
-          : "";
+        if (
+          result.truncated &&
+          (
+            typeof result.cursor !== "string" ||
+            !result.cursor ||
+            result.cursor.length > MAX_QUERY_VALUE_LENGTH ||
+            result.cursor === options.cursor
+          )
+        ) {
+          throw new Error("Invalid R2 pagination cursor");
+        }
+        const nextCursor = result.truncated ? result.cursor : "";
         const nextToken = nextCursor && showAll
           ? await cursorAccessToken(env.BROWSE_UUID, nextCursor)
           : "";
@@ -548,7 +619,27 @@ export default {
       return errorResponse(400, "Bad Request", isHead);
     }
 
-    const objectKey = objectValues.length === 1 ? objectValues[0] : url.pathname.slice(1);
+    let objectKey;
+    if (objectValues.length === 1) {
+      objectKey = objectValues[0];
+    } else {
+      try {
+        objectKey = decodeURIComponent(url.pathname.slice(1));
+      } catch {
+        return errorResponse(400, "Bad Request", isHead);
+      }
+    }
+    if (!objectKey || objectKey.length > MAX_QUERY_VALUE_LENGTH) {
+      return errorResponse(400, "Bad Request", isHead);
+    }
+    const downloadValues = url.searchParams.getAll("download");
+    if (
+      downloadValues.length > 1 ||
+      (downloadValues.length === 1 && downloadValues[0] !== "1")
+    ) {
+      return errorResponse(400, "Bad Request", isHead);
+    }
+    const downloadRequested = downloadValues.length === 1;
     const requiredKey = requiredKeyFor(accessKeys, objectKey);
 
     if (typeof requiredKey !== "string") {
@@ -574,9 +665,12 @@ export default {
         return errorResponse(404, "Not Found", isHead);
       }
 
-      const headers = new Headers();
+      const headers = new Headers(CORS_HEADERS);
       object.writeHttpMetadata(headers);
       headers.set("etag", object.httpEtag);
+      if (downloadRequested) {
+        headers.set("content-disposition", contentDisposition(objectKey));
+      }
       if (requiredKey) {
         headers.set("cache-control", "private, no-store");
         headers.set("referrer-policy", "no-referrer");

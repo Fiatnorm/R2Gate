@@ -7,6 +7,7 @@
 - Worker 的 R2 Binding 名称固定为 `BUCKET`。
 - `ACCESS_KEYS` 使用普通文本变量，值为 Object Key 到访问密钥的 JSON 映射。
 - `BROWSE_UUID` 使用必填的普通文本变量，只作为全部文件查询页的 Bearer 凭据。
+- `ACCESS_KEYS` 的键和值必须非空且各不超过 4096 字符；公开对象必须从映射中省略。`BROWSE_UUID` 最长 128 字符。
 
 ## 运行时代码
 
@@ -18,11 +19,15 @@
 - `DISPLAY_TIME_ZONE` 是可选普通文本变量，默认使用 `Asia/Singapore`；必须接受有效 IANA 时区并将 Files 上传时间精确到秒。
 - `/_files` 只列出不需要密钥的对象；`/_files?uuid=<UUID>` 验证 `BROWSE_UUID` 后列出全部对象，并为受保护对象生成携带现有 `key` 参数的链接。
 - 保留 `/<Object Key>?key=<访问密钥>` 直链和 `/_files?object=<Object Key>&key=<访问密钥>` 查询页链接，两者必须沿用相同鉴权；不得把首个查询分隔符 `?` 改为 `&`。
+- 直链路径必须按标准百分号编码解码；无法解码、为空或超过 4096 字符时返回 `400`，不得读取 R2。
+- 所有响应必须返回 `Access-Control-Allow-Origin: *`、`Access-Control-Allow-Methods: GET, HEAD, OPTIONS` 和 `Access-Control-Max-Age: 86400`；`OPTIONS` 返回 `204`，不得读取 R2。
+- 直链和 `/_files?object=...` 查询链接携带且仅携带一个 `download=1` 时必须以 Object Key 最后一个路径段生成安全的 `Content-Disposition: attachment`；重复或其他值返回 `400`，且不得读取 R2。
 - 受保护对象必须且只能携带一个 `key` 参数，并使用定时安全比较；重复或错误的 `key` 不得触发 R2 读取。
 - 文件查询必须使用 R2 cursor 分页，每次 `BUCKET.list()` 最多读取 200 个对象；不得按文件额外调用 `get()` 或 `head()` 获取列表元数据。
 - 全部文件查询的后续页必须使用 `BROWSE_UUID` 签发的 cursor 专用 HMAC 令牌，不得在分页链接中重复 UUID。
+- R2 返回 `truncated=true` 时必须提供非空、长度合规且不同于当前页的 cursor，否则受控返回 `500`，避免截断或循环。
 - 查询页不得缓存或向 Referer 泄露 UUID；Object Key 必须进行 HTML 转义和 URL 编码，不得把 UUID 显示在页面正文中。
-- `/` Status 与 `/_files` Files 必须保持为两个独立页面，共用 960px 内容宽度、Material Design 3 深色样式、橙色数据库图标和 Status / Files / License / GitHub 左侧导航；Status 在桌面视口中纵向居中，License 固定指向 `https://raw.githubusercontent.com/Fiatnorm/R2Gate/refs/heads/main/LICENSE`。Files 使用 Object Key / Access / Type / Size / Uploaded 顺序的紧凑列表，不在页面之间混入对方的主体内容。
+- `/` Status 与 `/_files` Files 必须保持为两个独立页面，共用 960px 内容宽度、Material Design 3 深色样式、橙色数据库图标和 Status / Files / License / GitHub 左侧导航；Status 在桌面视口中纵向居中，License 固定指向 `https://raw.githubusercontent.com/Fiatnorm/R2Gate/refs/heads/main/LICENSE`。Files 使用 Object Key / Access / Type / Size / Uploaded 顺序的紧凑列表，并在末尾提供独立下载组件，不在页面之间混入对方的主体内容。
 - Files 列表在内容区居中，桌面宽度受控且各列间距均衡；窄屏切换为紧凑卡片，不允许产生横向滚动。
 - Pages 上传只能使用 `pages-dist`，不得上传仓库根目录。
 - `direction-approved.md` 仅是历史决策记录，不得保留或重新加入仓库。
@@ -49,4 +54,4 @@
 - Python 测试：`.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py" -v`
 - 配置示例：使用 Python `json` 模块解析 `config.example.json`
 - Pages 一致性：比较 `worker.mjs` 与 `pages-dist/_worker.js`
-- 行为验证至少覆盖根路径成功、缺少或不完整 Binding、缺少或无效 `ACCESS_KEYS`、缺少 `BROWSE_UUID`、公开/全部文件查询、UUID、分页、特殊 Object Key、重复 key、GET、HEAD、403、404、405 和 R2 异常。
+- 行为验证至少覆盖根路径成功、缺少或不完整 Binding、缺少或无效 `ACCESS_KEYS`、缺少 `BROWSE_UUID`、公开/全部文件查询、UUID、分页、特殊 Object Key、重复 key、CORS、OPTIONS、下载、GET、HEAD、400、403、404、405 和 R2 异常。
