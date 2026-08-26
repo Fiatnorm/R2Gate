@@ -137,10 +137,10 @@ const APP_STYLES = `
     .access-badge.protected { background: #54470f; color: #ffe37d; }
     .type-cell { max-width: 100%; overflow: hidden; color: var(--on-surface-variant); font-size: 13px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
     .size-cell, .date-cell { justify-self: center; color: var(--on-surface-variant); font-size: 13px; font-variant-numeric: tabular-nums; text-align: center; }
-    .download-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 999px; background: var(--primary-container); color: var(--on-primary-container); text-decoration: none; font-size: 12px; font-weight: 760; transition: filter 160ms ease, transform 160ms ease; }
+    .download-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 999px; background: var(--primary-container); color: var(--on-primary-container); text-decoration: none; font-size: 12px; font-weight: 760; transition: box-shadow 160ms ease, filter 160ms ease, transform 160ms ease; }
     .download-button svg { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-    .download-button:hover { filter: brightness(1.08); }
-    .download-button:active { transform: scale(.97); }
+    .download-button:hover { box-shadow: 0 8px 18px rgb(203 194 255 / .28); filter: brightness(1.18) saturate(1.08); transform: translateY(-1px); }
+    .download-button:active { box-shadow: 0 3px 8px rgb(203 194 255 / .18); filter: brightness(1.08); transform: translateY(0) scale(.96); }
     .empty { display: grid; place-items: center; min-height: 180px; margin: 0; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); color: var(--on-surface-variant); }
     .pagination { display: flex; justify-content: end; margin-top: 20px; }
     .next-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 0 22px; border-radius: 999px; background: var(--primary); color: var(--on-primary); text-decoration: none; font-size: 14px; font-weight: 760; transition: filter 160ms ease, transform 160ms ease; }

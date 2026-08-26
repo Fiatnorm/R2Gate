@@ -371,6 +371,8 @@ test("public file listing excludes protected objects and safely links exact keys
   assert.match(body, /class="file-list"/);
   assert.match(body, /\.file-row:has\(\.file-open:hover\) \{ background: var\(--surface-container-high\); \}/);
   assert.doesNotMatch(body, /\.file-row:hover \{ background:/);
+  assert.match(body, /\.download-button:hover \{ box-shadow: 0 8px 18px rgb\(203 194 255 \/ \.28\); filter: brightness\(1\.18\) saturate\(1\.08\); transform: translateY\(-1px\); \}/);
+  assert.match(body, /\.download-button:active \{ box-shadow: 0 3px 8px rgb\(203 194 255 \/ \.18\); filter: brightness\(1\.08\); transform: translateY\(0\) scale\(\.96\); \}/);
   assert.match(body, /<span>Object key<\/span><span>Access<\/span><span>Type<\/span><span>Size<\/span><span>Uploaded \(GMT\+8\)<\/span><\/span><span>Download<\/span>/);
   assert.match(body, /text\/plain/);
   assert.match(body, /25 Aug 2026 08:00:00/);
