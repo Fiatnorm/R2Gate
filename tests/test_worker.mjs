@@ -43,7 +43,11 @@ async function assertErrorPage(response, status, messages) {
   assert.match(body, new RegExp(`ERROR ${status}`));
   assert.match(body, /class="nav-item disabled" aria-disabled="true"[\s\S]*Files/);
   assert.doesNotMatch(body, /href="\/_files"/);
-  assert.match(body, /href="https:\/\/raw\.githubusercontent\.com\/Fiatnorm\/R2Gate\/refs\/heads\/main\/LICENSE" target="_blank" rel="noopener noreferrer"/);
+  assert.match(body, /<button class="nav-item license" type="button" popovertarget="license-dialog" aria-haspopup="dialog">/);
+  assert.match(body, /id="license-dialog" popover role="dialog" aria-modal="true" aria-labelledby="license-title"/);
+  assert.match(body, /Copyright \(c\) 2026 Fiatnorm/);
+  assert.match(body, /popovertargetaction="hide" aria-label="Close MIT License" autofocus/);
+  assert.doesNotMatch(body, /raw\.githubusercontent\.com\/Fiatnorm\/R2Gate\/refs\/heads\/main\/LICENSE/);
 }
 
 
@@ -161,7 +165,8 @@ test("root reports deployment configuration", async () => {
   assert.match(body, /class="nav-item active" aria-current="page"[\s\S]*Status/);
   assert.match(body, /href="\/_files"[\s\S]*Files/);
   assert.match(body, /href="https:\/\/github\.com\/Fiatnorm\/R2Gate" target="_blank" rel="noopener noreferrer"/);
-  assert.match(body, /href="https:\/\/raw\.githubusercontent\.com\/Fiatnorm\/R2Gate\/refs\/heads\/main\/LICENSE" target="_blank" rel="noopener noreferrer"/);
+  assert.match(body, /<button class="nav-item license" type="button" popovertarget="license-dialog" aria-haspopup="dialog">/);
+  assert.match(body, /Copyright \(c\) 2026 Fiatnorm/);
   assert.match(body, /href="\/favicon\.svg"/);
   assert.match(body, /id="brand-orange"/);
   assert.match(body, /\.files-view, \.status-view \{ width: min\(960px, 100%\); margin: 0 auto; \}/);
@@ -380,7 +385,7 @@ test("public file listing excludes protected objects and safely links exact keys
   assert.doesNotMatch(body, />Open<|open-icon/);
   assert.match(body, /class="nav-item active" aria-current="page"[\s\S]*Files/);
   assert.match(body, /href="https:\/\/github\.com\/Fiatnorm\/R2Gate" target="_blank" rel="noopener noreferrer"/);
-  assert.match(body, /href="https:\/\/raw\.githubusercontent\.com\/Fiatnorm\/R2Gate\/refs\/heads\/main\/LICENSE" target="_blank" rel="noopener noreferrer"/);
+  assert.match(body, /<button class="nav-item license" type="button" popovertarget="license-dialog" aria-haspopup="dialog">/);
   assert.doesNotMatch(body, /R2Gate is running successfully\./);
   assert.match(body, /href="\/_files\?object=public\.txt"/);
   assert.match(body, /href="\/_files\?object=public\.txt&amp;download=1" download="public\.txt"/);

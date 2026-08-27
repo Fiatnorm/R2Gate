@@ -1,6 +1,26 @@
 const SUCCESS_MESSAGE = "R2Gate is running successfully.";
 const GITHUB_URL = "https://github.com/Fiatnorm/R2Gate";
-const LICENSE_URL = "https://raw.githubusercontent.com/Fiatnorm/R2Gate/refs/heads/main/LICENSE";
+const LICENSE_TEXT = `MIT License
+
+Copyright (c) 2026 Fiatnorm
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.`;
 const FILES_PATH = "/_files";
 const FILES_PER_PAGE = 200;
 const MAX_QUERY_VALUE_LENGTH = 4096;
@@ -85,7 +105,7 @@ const APP_STYLES = `
     .top-meta { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: 999px; background: var(--surface-container-highest); color: var(--on-surface-variant); font-size: 13px; font-weight: 700; letter-spacing: .02em; }
     .nav-rail { position: fixed; z-index: 15; inset: 72px auto 0 0; width: 88px; padding: 16px 8px; border-right: 1px solid var(--outline-variant); background: var(--surface-container-low); }
     .nav-rail nav { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; }
-    .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 64px; min-height: 64px; padding: 7px 4px; border-radius: 22px; color: var(--on-surface-variant); text-decoration: none; font-size: 11px; font-weight: 700; transition: background-color 160ms ease, color 160ms ease, transform 160ms ease; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 64px; min-height: 64px; padding: 7px 4px; border: 0; border-radius: 22px; background: transparent; color: var(--on-surface-variant); font: inherit; font-size: 11px; font-weight: 700; text-decoration: none; cursor: pointer; transition: background-color 160ms ease, color 160ms ease, transform 160ms ease; }
     .nav-item svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .nav-item:hover { background: var(--surface-container-high); color: var(--on-surface); }
     .nav-item:active { transform: scale(.97); }
@@ -93,6 +113,16 @@ const APP_STYLES = `
     .nav-item.disabled { color: #706c78; cursor: not-allowed; }
     .nav-item.disabled:hover { background: transparent; color: #706c78; }
     .nav-item.license { margin-top: auto; }
+    .license-dialog { width: min(900px, calc(100% - 48px)); max-height: min(760px, calc(100dvh - 96px)); margin: auto; padding: 0; overflow: hidden; border: 1px solid var(--outline-variant); border-radius: 28px; background: var(--surface-container); color: var(--on-surface); box-shadow: 0 24px 80px rgb(0 0 0 / .58); }
+    .license-dialog::backdrop { background: rgb(5 5 10 / .76); backdrop-filter: blur(8px); }
+    .license-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 96px; padding: 20px 28px 20px 36px; border-bottom: 1px solid var(--outline-variant); }
+    .license-dialog-title { margin: 0; font-size: clamp(28px, 4vw, 38px); font-weight: 650; letter-spacing: -.025em; }
+    .license-close { display: grid; place-items: center; flex: 0 0 auto; width: 52px; height: 52px; padding: 0; border: 0; border-radius: 18px; background: var(--surface-container-high); color: var(--on-surface); cursor: pointer; transition: background-color 160ms ease, transform 160ms ease; }
+    .license-close:hover { background: var(--surface-container-highest); }
+    .license-close:active { transform: scale(.96); }
+    .license-close svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+    .license-copy { max-height: calc(min(760px, 100dvh - 96px) - 97px); margin: 0; padding: 32px 36px 36px; overflow: auto; color: var(--on-surface-variant); font: 500 15px/1.7 ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .license-copy::first-line { color: var(--success); }
     .page-shell { min-height: 100vh; margin-left: 88px; padding-top: 72px; }
     .page-content { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 48px 0 64px; }
     .files-view, .status-view { width: min(960px, 100%); margin: 0 auto; }
@@ -167,6 +197,10 @@ const APP_STYLES = `
       .nav-rail nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
       .nav-item { width: 100%; min-height: 62px; border-radius: 20px; }
       .nav-item.license { margin-top: 0; }
+      .license-dialog { width: calc(100% - 24px); max-height: calc(100dvh - 48px); border-radius: 24px; }
+      .license-dialog-header { min-height: 80px; padding: 14px 16px 14px 22px; }
+      .license-close { width: 48px; height: 48px; border-radius: 16px; }
+      .license-copy { max-height: calc(100dvh - 129px); padding: 24px 22px 28px; font-size: 13px; line-height: 1.65; }
       .page-shell { margin-left: 0; padding: 64px 0 76px; }
       .page-content { width: calc(100% - 24px); padding: 28px 0 36px; }
       .page-header { align-items: center; gap: 12px; margin-bottom: 20px; }
@@ -217,12 +251,13 @@ function navigation(activePage, filesEnabled = true) {
     : activePage === "files"
     ? `<span class="nav-item active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.7 2H20v8.8A1.7 1.7 0 0 1 18.3 20H5.7A1.7 1.7 0 0 1 4 18.3Z"/><path d="M4 10h16"/></svg><span>Files</span></span>`
     : `<a class="nav-item" href="${FILES_PATH}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.7 2H20v8.8A1.7 1.7 0 0 1 18.3 20H5.7A1.7 1.7 0 0 1 4 18.3Z"/><path d="M4 10h16"/></svg><span>Files</span></a>`;
-  const licenseItem = `<a class="nav-item license" href="${LICENSE_URL}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4V20H7Z"/><path d="M14 3.5V8h4M10 12h5M10 15h5"/></svg><span>License</span></a>`;
+  const licenseItem = `<button class="nav-item license" type="button" popovertarget="license-dialog" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4V20H7Z"/><path d="M14 3.5V8h4M10 12h5M10 15h5"/></svg><span>License</span></button>`;
   const githubItem = `<a class="nav-item github" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h5v5"/><path d="m20 4-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg><span>GitHub</span></a>`;
   return `<aside class="nav-rail" aria-label="Primary navigation"><nav>${statusItem}${filesItem}${licenseItem}${githubItem}</nav></aside>`;
 }
 
 function appPage({ title, activePage, topMeta = "", content, filesEnabled = true }) {
+  const licenseDialog = `<section class="license-dialog" id="license-dialog" popover role="dialog" aria-modal="true" aria-labelledby="license-title"><header class="license-dialog-header"><h2 class="license-dialog-title" id="license-title">MIT License</h2><button class="license-close" type="button" popovertarget="license-dialog" popovertargetaction="hide" aria-label="Close MIT License" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header><pre class="license-copy">${escapeHtml(LICENSE_TEXT.replace(/^MIT License\n\n/, ""))}</pre></section>`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -238,6 +273,7 @@ function appPage({ title, activePage, topMeta = "", content, filesEnabled = true
   <header class="topbar"><a class="brand-lockup" href="/" aria-label="R2Gate status">${databaseIcon()}<span>R2Gate</span></a>${topMeta ? `<span class="top-meta">${escapeHtml(topMeta)}</span>` : ""}</header>
   ${navigation(activePage, filesEnabled)}
   <div class="page-shell"><main class="page-content" id="main-content">${content}</main></div>
+  ${licenseDialog}
 </body>
 </html>`;
 }

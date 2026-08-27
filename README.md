@@ -151,7 +151,7 @@ https://example.com/_files
 https://example.com/_files?uuid=your-browse-uuid
 ```
 
-Files 与 Status 是两个独立页面，共用深色样式和 Status / Files / License / GitHub 导航。列表在内容区居中，桌面端按 Object Key / Access / Type / Size / Uploaded 紧凑排列，并在末尾提供独立下载按钮；窄屏自动切换为带 44px 下载图标的卡片。点击文件主体打开对象，点击下载组件则使用 `download=1` 触发浏览器下载。
+Files 与 Status 是两个独立页面，共用深色样式和 Status / Files / License / GitHub 导航。License 在当前页面以弹窗展示仓库内置的 MIT License，可用关闭按钮、Esc 或点击遮罩关闭。列表在内容区居中，桌面端按 Object Key / Access / Type / Size / Uploaded 紧凑排列，并在末尾提供独立下载按钮；窄屏自动切换为带 44px 下载图标的卡片。点击文件主体打开对象，点击下载组件则使用 `download=1` 触发浏览器下载。
 
 - 公开页只显示无需密钥的对象；全部页标签显示 `Protected`。
 - 类型来自同一次 R2 `list()` 返回的 HTTP metadata；缺失时显示 `application/octet-stream`，不会逐项调用 `get()` 或 `head()`。
@@ -204,4 +204,4 @@ node --test tests/test_worker.mjs
 
 ## 开源协议
 
-R2Gate 使用 [MIT License](LICENSE)。页面左侧 License 组件固定跳转到 `main` 分支的许可证原文。
+R2Gate 使用 [MIT License](LICENSE)。页面中的 License 组件直接呈现许可证内容，不会跳转到外部页面。

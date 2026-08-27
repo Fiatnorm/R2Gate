@@ -27,7 +27,7 @@
 - 全部文件查询的后续页必须使用 `BROWSE_UUID` 签发的 cursor 专用 HMAC 令牌，不得在分页链接中重复 UUID。
 - R2 返回 `truncated=true` 时必须提供非空、长度合规且不同于当前页的 cursor，否则受控返回 `500`，避免截断或循环。
 - 查询页不得缓存或向 Referer 泄露 UUID；Object Key 必须进行 HTML 转义和 URL 编码，不得把 UUID 显示在页面正文中。
-- `/` Status 与 `/_files` Files 必须保持为两个独立页面，共用 960px 内容宽度、Material Design 3 深色样式、橙色数据库图标和 Status / Files / License / GitHub 左侧导航；Status 在桌面视口中纵向居中，License 固定指向 `https://raw.githubusercontent.com/Fiatnorm/R2Gate/refs/heads/main/LICENSE`。Files 使用 Object Key / Access / Type / Size / Uploaded 顺序的紧凑列表，并在末尾提供独立下载组件，不在页面之间混入对方的主体内容。
+- `/` Status 与 `/_files` Files 必须保持为两个独立页面，共用 960px 内容宽度、Material Design 3 深色样式、橙色数据库图标和 Status / Files / License / GitHub 左侧导航；Status 在桌面视口中纵向居中，License 在当前页面以弹窗呈现仓库内置的 MIT License，不得跳转到外部页面。Files 使用 Object Key / Access / Type / Size / Uploaded 顺序的紧凑列表，并在末尾提供独立下载组件，不在页面之间混入对方的主体内容。
 - Files 列表在内容区居中，桌面宽度受控且各列间距均衡；窄屏切换为紧凑卡片，不允许产生横向滚动。
 - Pages 上传只能使用 `pages-dist`，不得上传仓库根目录。
 - `direction-approved.md` 仅是历史决策记录，不得保留或重新加入仓库。
