@@ -113,15 +113,15 @@ const APP_STYLES = `
     .nav-item.disabled { color: #706c78; cursor: not-allowed; }
     .nav-item.disabled:hover { background: transparent; color: #706c78; }
     .nav-item.license { margin-top: auto; }
-    .license-dialog { width: min(900px, calc(100% - 48px)); max-height: min(760px, calc(100dvh - 96px)); margin: auto; padding: 0; overflow: hidden; border: 1px solid var(--outline-variant); border-radius: 28px; background: var(--surface-container); color: var(--on-surface); box-shadow: 0 24px 80px rgb(0 0 0 / .58); }
+    .license-dialog { width: min(720px, calc(100% - 48px)); max-height: min(640px, calc(100dvh - 96px)); margin: auto; padding: 0; overflow: hidden; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container); color: var(--on-surface); box-shadow: 0 24px 80px rgb(0 0 0 / .58); }
     .license-dialog::backdrop { background: rgb(5 5 10 / .76); backdrop-filter: blur(8px); }
-    .license-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 96px; padding: 20px 28px 20px 36px; border-bottom: 1px solid var(--outline-variant); }
-    .license-dialog-title { margin: 0; font-size: clamp(28px, 4vw, 38px); font-weight: 650; letter-spacing: -.025em; }
-    .license-close { display: grid; place-items: center; flex: 0 0 auto; width: 52px; height: 52px; padding: 0; border: 0; border-radius: 18px; background: var(--surface-container-high); color: var(--on-surface); cursor: pointer; transition: background-color 160ms ease, transform 160ms ease; }
+    .license-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 80px; padding: 16px 20px 16px 28px; border-bottom: 1px solid var(--outline-variant); }
+    .license-dialog-title { margin: 0; font-size: 28px; font-weight: 620; letter-spacing: -.02em; }
+    .license-close { display: grid; place-items: center; flex: 0 0 auto; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 14px; background: var(--surface-container-high); color: var(--on-surface); cursor: pointer; transition: background-color 160ms ease, transform 160ms ease; }
     .license-close:hover { background: var(--surface-container-highest); }
     .license-close:active { transform: scale(.96); }
-    .license-close svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
-    .license-copy { max-height: calc(min(760px, 100dvh - 96px) - 97px); margin: 0; padding: 32px 36px 36px; overflow: auto; color: var(--on-surface-variant); font: 500 15px/1.7 ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .license-close svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; }
+    .license-copy { max-height: calc(min(640px, 100dvh - 96px) - 81px); margin: 0; padding: 24px 28px 28px; overflow: auto; color: var(--on-surface-variant); font: 450 13px/1.65 ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
     .license-copy::first-line { color: var(--success); }
     .page-shell { min-height: 100vh; margin-left: 88px; padding-top: 72px; }
     .page-content { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 48px 0 64px; }
@@ -197,10 +197,11 @@ const APP_STYLES = `
       .nav-rail nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
       .nav-item { width: 100%; min-height: 62px; border-radius: 20px; }
       .nav-item.license { margin-top: 0; }
-      .license-dialog { width: calc(100% - 24px); max-height: calc(100dvh - 48px); border-radius: 24px; }
-      .license-dialog-header { min-height: 80px; padding: 14px 16px 14px 22px; }
-      .license-close { width: 48px; height: 48px; border-radius: 16px; }
-      .license-copy { max-height: calc(100dvh - 129px); padding: 24px 22px 28px; font-size: 13px; line-height: 1.65; }
+      .license-dialog { width: calc(100% - 32px); max-height: calc(100dvh - 80px); border-radius: 20px; }
+      .license-dialog-header { min-height: 72px; padding: 14px 14px 14px 20px; }
+      .license-dialog-title { font-size: 24px; }
+      .license-close { width: 44px; height: 44px; border-radius: 14px; }
+      .license-copy { max-height: calc(100dvh - 153px); padding: 20px 20px 24px; font-size: 12px; line-height: 1.6; }
       .page-shell { margin-left: 0; padding: 64px 0 76px; }
       .page-content { width: calc(100% - 24px); padding: 28px 0 36px; }
       .page-header { align-items: center; gap: 12px; margin-bottom: 20px; }

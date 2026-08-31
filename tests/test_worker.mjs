@@ -46,6 +46,8 @@ async function assertErrorPage(response, status, messages) {
   assert.match(body, /<button class="nav-item license" type="button" popovertarget="license-dialog" aria-haspopup="dialog">/);
   assert.match(body, /id="license-dialog" popover role="dialog" aria-modal="true" aria-labelledby="license-title"/);
   assert.match(body, /Copyright \(c\) 2026 Fiatnorm/);
+  assert.match(body, /\.license-dialog \{ width: min\(720px, calc\(100% - 48px\)\); max-height: min\(640px, calc\(100dvh - 96px\)\);/);
+  assert.match(body, /font: 450 13px\/1\.65 ui-monospace/);
   assert.match(body, /popovertargetaction="hide" aria-label="Close MIT License" autofocus/);
   assert.doesNotMatch(body, /raw\.githubusercontent\.com\/Fiatnorm\/R2Gate\/refs\/heads\/main\/LICENSE/);
 }
