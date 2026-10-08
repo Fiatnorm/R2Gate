@@ -105,7 +105,7 @@ const APP_STYLES = `
     .top-meta { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: 999px; background: var(--surface-container-highest); color: var(--on-surface-variant); font-size: 13px; font-weight: 700; letter-spacing: .02em; }
     .nav-rail { position: fixed; z-index: 15; inset: 72px auto 0 0; width: 88px; padding: 16px 8px; border-right: 1px solid var(--outline-variant); background: var(--surface-container-low); }
     .nav-rail nav { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; }
-    .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 64px; min-height: 64px; padding: 7px 4px; border: 0; border-radius: 22px; background: transparent; color: var(--on-surface-variant); font: inherit; font-size: 11px; font-weight: 700; text-decoration: none; cursor: pointer; transition: background-color 160ms ease, color 160ms ease, transform 160ms ease; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 64px; min-height: 64px; padding: 7px 4px; border: 0; border-radius: 22px; background: transparent; color: var(--on-surface-variant); font: inherit; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; transition: background-color 160ms ease, color 160ms ease, transform 160ms ease; }
     .nav-item svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .nav-item:hover { background: var(--surface-container-high); color: var(--on-surface); }
     .nav-item:active { transform: scale(.97); }
@@ -148,13 +148,13 @@ const APP_STYLES = `
     .security-note { display: flex; align-items: center; gap: 12px; min-height: 52px; margin: 0 0 20px; padding: 12px 16px; border-radius: 16px; background: var(--warning-container); color: #ffe38a; font-size: 14px; font-weight: 650; }
     .security-note svg { width: 21px; height: 21px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
     .file-list { overflow: hidden; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); }
-    .file-list-head, .file-row { display: grid; grid-template-columns: minmax(0, 1fr) 84px 108px; align-items: center; column-gap: 10px; }
-    .file-list-head { min-height: 44px; padding: 0 16px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-high); color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-    .file-list-head-main, .file-main { display: grid; grid-template-columns: 32px minmax(130px, 1fr) 80px 104px 64px 150px; align-items: center; column-gap: 10px; min-width: 0; }
+    .file-list-head, .file-row { display: grid; grid-template-columns: minmax(0, 1fr) 84px 108px; align-items: center; column-gap: 16px; }
+    .file-list-head { min-height: 44px; padding: 0 40px 0 16px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-high); color: var(--primary); font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .file-list-head-main, .file-main { display: grid; grid-template-columns: 32px minmax(130px, 1fr) 80px 104px 64px 164px; align-items: center; column-gap: 16px; min-width: 0; }
     .file-list-head-main > span:nth-child(n+3), .file-list-head > span:not(.file-list-head-main) { justify-self: center; text-align: center; }
     .file-list ul { margin: 0; padding: 0; list-style: none; }
     .file-list li + li { border-top: 1px solid var(--outline-variant); }
-    .file-row { min-height: 64px; padding: 0 16px; color: var(--on-surface); transition: background-color 160ms ease; }
+    .file-row { min-height: 64px; padding: 0 40px 0 16px; color: var(--on-surface); transition: background-color 160ms ease; }
     .file-main { align-self: stretch; min-height: 64px; padding: 8px 0; }
     .file-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--surface-container-highest); color: var(--on-surface-variant); }
     .file-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
