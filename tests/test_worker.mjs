@@ -376,15 +376,20 @@ test("public file listing excludes protected objects and safely links exact keys
   assert.match(body, /class="files-view"/);
   assert.match(body, /\.files-view, \.status-view \{ width: min\(960px, 100%\); margin: 0 auto; \}/);
   assert.match(body, /class="file-list"/);
-  assert.match(body, /\.file-row:has\(\.file-open:hover\) \{ background: var\(--surface-container-high\); \}/);
+  assert.match(body, /<li class="file-row"><div class="file-main"/);
+  assert.doesNotMatch(body, /class="file-open"|<div class="file-main"[^>]*href=/);
   assert.doesNotMatch(body, /\.file-row:hover \{ background:/);
   assert.match(body, /\.download-button:hover \{ box-shadow: 0 8px 18px rgb\(203 194 255 \/ \.28\); color: #fffaff; filter: brightness\(1\.18\) saturate\(1\.08\); transform: translateY\(-1px\); \}/);
   assert.match(body, /\.download-button:active \{ box-shadow: 0 3px 8px rgb\(203 194 255 \/ \.18\); color: #f7f0ff; filter: brightness\(1\.08\); transform: translateY\(0\) scale\(\.96\); \}/);
-  assert.match(body, /<span>Object key<\/span><span>Access<\/span><span>Type<\/span><span>Size<\/span><span>Uploaded \(GMT\+8\)<\/span><\/span><span>Download<\/span>/);
+  assert.match(body, /<span>Object key<\/span><span>Access<\/span><span>Type<\/span><span>Size<\/span><span>Uploaded \(GMT\+8\)<\/span><\/span><span>Open<\/span><span>Download<\/span>/);
   assert.match(body, /text\/plain/);
   assert.match(body, /25 Aug 2026 08:00:00/);
   assert.doesNotMatch(body, /Uploaded \(UTC\)| UTC/);
-  assert.doesNotMatch(body, />Open<|open-icon/);
+  assert.match(body, /<a class="open-button" href="\/_files\?object=public\.txt" rel="noreferrer" aria-label="Open public\.txt"/);
+  for (const row of body.matchAll(/<li class="file-row">([\s\S]*?)<\/li>/g)) {
+    assert.equal((row[1].match(/<a /g) || []).length, 2);
+    assert.doesNotMatch(row[1].split("</div>")[0], /<a /);
+  }
   assert.match(body, /class="nav-item active" aria-current="page"[\s\S]*Files/);
   assert.match(body, /href="https:\/\/github\.com\/Fiatnorm\/R2Gate" target="_blank" rel="noopener noreferrer"/);
   assert.match(body, /<button class="nav-item license" type="button" popovertarget="license-dialog" aria-haspopup="dialog">/);

@@ -148,15 +148,14 @@ const APP_STYLES = `
     .security-note { display: flex; align-items: center; gap: 12px; min-height: 52px; margin: 0 0 20px; padding: 12px 16px; border-radius: 16px; background: var(--warning-container); color: #ffe38a; font-size: 14px; font-weight: 650; }
     .security-note svg { width: 21px; height: 21px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
     .file-list { overflow: hidden; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); }
-    .file-list-head, .file-row { display: grid; grid-template-columns: minmax(0, 1fr) 108px; align-items: center; column-gap: 12px; }
-    .file-list-head { min-height: 44px; padding: 0 16px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-high); color: var(--primary); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-    .file-list-head-main, .file-open { display: grid; grid-template-columns: 36px minmax(180px, 1fr) 96px 128px 76px 168px; align-items: center; column-gap: 12px; min-width: 0; }
-    .file-list-head-main > span:nth-child(n+3), .file-list-head > span:last-child { justify-self: center; text-align: center; }
+    .file-list-head, .file-row { display: grid; grid-template-columns: minmax(0, 1fr) 84px 108px; align-items: center; column-gap: 10px; }
+    .file-list-head { min-height: 44px; padding: 0 16px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-high); color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .file-list-head-main, .file-main { display: grid; grid-template-columns: 32px minmax(130px, 1fr) 80px 104px 64px 150px; align-items: center; column-gap: 10px; min-width: 0; }
+    .file-list-head-main > span:nth-child(n+3), .file-list-head > span:not(.file-list-head-main) { justify-self: center; text-align: center; }
     .file-list ul { margin: 0; padding: 0; list-style: none; }
     .file-list li + li { border-top: 1px solid var(--outline-variant); }
     .file-row { min-height: 64px; padding: 0 16px; color: var(--on-surface); transition: background-color 160ms ease; }
-    .file-row:has(.file-open:hover) { background: var(--surface-container-high); }
-    .file-open { align-self: stretch; min-height: 64px; padding: 8px 0; color: var(--on-surface); text-decoration: none; }
+    .file-main { align-self: stretch; min-height: 64px; padding: 8px 0; }
     .file-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--surface-container-highest); color: var(--on-surface-variant); }
     .file-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
     .object-cell { min-width: 0; }
@@ -167,26 +166,26 @@ const APP_STYLES = `
     .access-badge.protected { background: #54470f; color: #ffe37d; }
     .type-cell { max-width: 100%; overflow: hidden; color: var(--on-surface-variant); font-size: 13px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
     .size-cell, .date-cell { justify-self: center; color: var(--on-surface-variant); font-size: 13px; font-variant-numeric: tabular-nums; text-align: center; }
-    .download-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 999px; background: var(--primary-container); color: var(--on-primary-container); text-decoration: none; font-size: 12px; font-weight: 760; transition: box-shadow 160ms ease, filter 160ms ease, transform 160ms ease; }
-    .download-button svg { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-    .download-button:hover { box-shadow: 0 8px 18px rgb(203 194 255 / .28); color: #fffaff; filter: brightness(1.18) saturate(1.08); transform: translateY(-1px); }
-    .download-button:active { box-shadow: 0 3px 8px rgb(203 194 255 / .18); color: #f7f0ff; filter: brightness(1.08); transform: translateY(0) scale(.96); }
+    .open-button, .download-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 999px; background: var(--primary-container); color: var(--on-primary-container); text-decoration: none; font-size: 12px; font-weight: 760; transition: box-shadow 160ms ease, filter 160ms ease, transform 160ms ease; }
+    .open-button svg, .download-button svg { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .open-button:hover, .download-button:hover { box-shadow: 0 8px 18px rgb(203 194 255 / .28); color: #fffaff; filter: brightness(1.18) saturate(1.08); transform: translateY(-1px); }
+    .open-button:active, .download-button:active { box-shadow: 0 3px 8px rgb(203 194 255 / .18); color: #f7f0ff; filter: brightness(1.08); transform: translateY(0) scale(.96); }
     .empty { display: grid; place-items: center; min-height: 180px; margin: 0; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); color: var(--on-surface-variant); }
     .pagination { display: flex; justify-content: end; margin-top: 20px; }
     .next-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 0 22px; border-radius: 999px; background: var(--primary); color: var(--on-primary); text-decoration: none; font-size: 14px; font-weight: 760; transition: filter 160ms ease, transform 160ms ease; }
     .next-button:hover { filter: brightness(1.06); }
     .next-button:active { transform: scale(.98); }
     :focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
-    @media (max-width: 980px) {
+    @media (max-width: 1100px) {
       .file-list-head { display: none; }
-      .file-row { grid-template-columns: minmax(0, 1fr) 44px; gap: 8px; min-height: 82px; padding: 0 14px; }
-      .file-open { grid-template-columns: 38px minmax(0, 1fr) auto; gap: 10px; min-height: 82px; padding: 12px 0; }
-      .file-icon { width: 36px; height: 36px; }
-      .object-meta { display: block; }
+      .file-row { grid-template-columns: minmax(0, 1fr) 44px 44px; gap: 8px; min-height: 82px; padding: 0 14px; }
+      .file-main { grid-template-columns: 28px minmax(0, 1fr); gap: 8px; min-height: 82px; padding: 12px 0; }
+      .file-icon { width: 28px; height: 28px; align-self: start; }
+      .object-meta { display: block; overflow-wrap: anywhere; }
       .type-cell, .size-cell, .date-cell { display: none; }
-      .access-badge { min-height: 30px; padding: 0 9px; font-size: 11px; }
-      .download-button { width: 44px; height: 44px; padding: 0; }
-      .download-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+      .access-badge { grid-column: 2; justify-self: start; min-height: 30px; padding: 0 9px; font-size: 11px; }
+      .open-button, .download-button { width: 44px; height: 44px; padding: 0; }
+      .open-label, .download-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     }
     @media (max-width: 760px) {
       .topbar { height: 64px; padding: 0 16px; }
@@ -252,7 +251,7 @@ function navigation(activePage, filesEnabled = true) {
     : activePage === "files"
     ? `<span class="nav-item active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.7 2H20v8.8A1.7 1.7 0 0 1 18.3 20H5.7A1.7 1.7 0 0 1 4 18.3Z"/><path d="M4 10h16"/></svg><span>Files</span></span>`
     : `<a class="nav-item" href="${FILES_PATH}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.7 2H20v8.8A1.7 1.7 0 0 1 18.3 20H5.7A1.7 1.7 0 0 1 4 18.3Z"/><path d="M4 10h16"/></svg><span>Files</span></a>`;
-  const licenseItem = `<button class="nav-item license" type="button" popovertarget="license-dialog" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4V20H7Z"/><path d="M14 3.5V8h4M10 12h5M10 15h5"/></svg><span>License</span></button>`;
+  const licenseItem = `<button class="nav-item license" type="button" popovertarget="license-dialog" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14v8l6-2 6 2v-8"/><circle cx="12" cy="9" r="8"/><circle cx="12" cy="9" r="3.5" fill="currentColor" stroke="none"/></svg><span>License</span></button>`;
   const githubItem = `<a class="nav-item github" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h5v5"/><path d="m20 4-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg><span>GitHub</span></a>`;
   return `<aside class="nav-rail" aria-label="Primary navigation"><nav>${statusItem}${filesItem}${licenseItem}${githubItem}</nav></aside>`;
 }
@@ -409,14 +408,14 @@ function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken, displa
     const type = escapeHtml(formatContentType(object));
     const size = escapeHtml(formatSize(object.size));
     const uploaded = escapeHtml(formatUploaded(object.uploaded, uploadedFormatter));
-    return `<li class="file-row"><a class="file-open" href="${escapeHtml(href)}" rel="noreferrer" title="${escapeHtml(object.key)}">
+    return `<li class="file-row"><div class="file-main" title="${escapeHtml(object.key)}">
       <span class="file-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4V20H7Z"/><path d="M14 3.5V8h4M10 12h5M10 15h5"/></svg></span>
       <span class="object-cell"><span class="object-name">${escapeHtml(object.key)}</span><span class="object-meta">${type} · ${size} · ${uploaded} ${escapeHtml(timeZoneLabel)}</span></span>
       <span class="access-badge ${requiredKey ? "protected" : "public"}">${visibility}</span>
       <span class="type-cell" title="${type}">${type}</span>
       <span class="size-cell">${size}</span>
       <span class="date-cell">${uploaded}</span>
-    </a><a class="download-button" href="${escapeHtml(downloadHref)}" download="${escapeHtml(filename)}" rel="noreferrer" aria-label="Download ${escapeHtml(object.key)}" title="Download ${escapeHtml(object.key)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5 4.5-4.5"/><path d="M5 20h14"/></svg><span class="download-label">Download</span></a></li>`;
+    </div><a class="open-button" href="${escapeHtml(href)}" rel="noreferrer" aria-label="Open ${escapeHtml(object.key)}" title="Open ${escapeHtml(object.key)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 21H4V3h9l5 5v5M13 3v5h5"/><path d="M21 16h-6v6M15 16l7 7"/></svg><span class="open-label">Open</span></a><a class="download-button" href="${escapeHtml(downloadHref)}" download="${escapeHtml(filename)}" rel="noreferrer" aria-label="Download ${escapeHtml(object.key)}" title="Download ${escapeHtml(object.key)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5 4.5-4.5"/><path d="M5 20h14"/></svg><span class="download-label">Download</span></a></li>`;
   }).join("");
 
   let nextLink = "";
@@ -434,7 +433,7 @@ function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken, displa
     : "";
   const content = `<section class="files-view"><header class="page-header"><div><p class="eyebrow">${showAll ? "Authorized scope" : "Public scope"}</p><h1>${scope}</h1></div><span class="scope-chip">${showAll ? "Protected" : "Public"}</span></header>
     ${note}
-    ${rows ? `<section class="file-list" aria-label="${scope}"><div class="file-list-head" aria-hidden="true"><span class="file-list-head-main"><span></span><span>Object key</span><span>Access</span><span>Type</span><span>Size</span><span>Uploaded (${escapeHtml(timeZoneLabel)})</span></span><span>Download</span></div><ul>${rows}</ul></section>` : `<p class="empty">${emptyMessage}</p>`}
+    ${rows ? `<section class="file-list" aria-label="${scope}"><div class="file-list-head" aria-hidden="true"><span class="file-list-head-main"><span></span><span>Object key</span><span>Access</span><span>Type</span><span>Size</span><span>Uploaded (${escapeHtml(timeZoneLabel)})</span></span><span>Open</span><span>Download</span></div><ul>${rows}</ul></section>` : `<p class="empty">${emptyMessage}</p>`}
     ${nextLink}</section>`;
   return appPage({ title: scope, activePage: "files", topMeta: showAll ? "Protected access" : "Public access", content });
 }
