@@ -378,7 +378,7 @@ test("public file listing excludes protected objects and safely links exact keys
   assert.match(body, /class="file-list"/);
   assert.match(body, /<li class="file-row"><div class="file-main"/);
   assert.doesNotMatch(body, /class="file-open"|<div class="file-main"[^>]*href=/);
-  assert.doesNotMatch(body, /\.file-row:hover \{ background:/);
+  assert.match(body, /\.file-row:hover \{ background: var\(--surface-container-high\); \}/);
   assert.match(body, /\.download-button:hover \{ box-shadow: 0 8px 18px rgb\(203 194 255 \/ \.28\); color: #fffaff; filter: brightness\(1\.18\) saturate\(1\.08\); transform: translateY\(-1px\); \}/);
   assert.match(body, /\.download-button:active \{ box-shadow: 0 3px 8px rgb\(203 194 255 \/ \.18\); color: #f7f0ff; filter: brightness\(1\.08\); transform: translateY\(0\) scale\(\.96\); \}/);
   assert.match(body, /<span>Object key<\/span><span>Access<\/span><span>Type<\/span><span>Size<\/span><span>Uploaded \(GMT\+8\)<\/span><\/span><span>Open<\/span><span>Download<\/span>/);
