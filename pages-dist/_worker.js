@@ -415,7 +415,7 @@ function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken, displa
       <span class="type-cell" title="${type}">${type}</span>
       <span class="size-cell">${size}</span>
       <span class="date-cell">${uploaded}</span>
-    </div><a class="open-button" href="${escapeHtml(href)}" rel="noreferrer" aria-label="Open ${escapeHtml(object.key)}" title="Open ${escapeHtml(object.key)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 21H4V3h9l5 5v5M13 3v5h5"/><path d="M21 16h-6v6M15 16l7 7"/></svg><span class="open-label">Open</span></a><a class="download-button" href="${escapeHtml(downloadHref)}" download="${escapeHtml(filename)}" rel="noreferrer" aria-label="Download ${escapeHtml(object.key)}" title="Download ${escapeHtml(object.key)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5 4.5-4.5"/><path d="M5 20h14"/></svg><span class="download-label">Download</span></a></li>`;
+    </div><a class="open-button" href="${escapeHtml(href)}" rel="noreferrer" aria-label="Open ${escapeHtml(object.key)}" title="Open ${escapeHtml(object.key)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 21H4V3h9l5 5v5M13 3v5h5"/><path d="M21 16h-6v6M15 16l7 7"/></svg><span class="open-label">Open</span></a><a class="download-button" href="${escapeHtml(downloadHref)}" download="${escapeHtml(filename)}" rel="noreferrer" aria-label="Download ${escapeHtml(object.key)}" title="Download ${escapeHtml(object.key)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"></path></svg><span class="download-label">Download</span></a></li>`;
   }).join("");
 
   let nextLink = "";
