@@ -27,8 +27,11 @@
 - 全部文件查询的后续页必须使用 `BROWSE_UUID` 签发的 cursor 专用 HMAC 令牌，不得在分页链接中重复 UUID。
 - R2 返回 `truncated=true` 时必须提供非空、长度合规且不同于当前页的 cursor，否则受控返回 `500`，避免截断或循环。
 - 查询页不得缓存或向 Referer 泄露 UUID；Object Key 必须进行 HTML 转义和 URL 编码，不得把 UUID 显示在页面正文中。
-- `/` Status 与 `/_files` Files 必须保持为两个独立页面，共用 960px 内容宽度、Material Design 3 深色样式、橙色数据库图标和 Status / Files / License / GitHub 左侧导航；Status 在桌面视口中纵向居中，License 在当前页面以弹窗呈现仓库内置的 MIT License，不得跳转到外部页面。Files 使用 Object Key / Access / Type / Size / Uploaded 顺序的紧凑列表，并在末尾提供独立下载组件，不在页面之间混入对方的主体内容。
+- `/` Status 与 `/_files` Files 必须保持为两个独立页面，共用 1120px 内容宽度、Material Design 3 亮暗主题样式、橙色数据库图标和 Status / Files / License / GitHub 左侧导航；Status 在桌面视口中纵向居中，License 在当前页面以弹窗呈现仓库内置的 MIT License，不得跳转到外部页面。Files 使用 Object Key / Access / Type / Size / Uploaded 顺序的紧凑列表，并在末尾提供独立 Copy / Open / Download 组件，不在页面之间混入对方的主体内容。
+- Files 顶部不显示 Public access / Protected access 标签；标题旁 Public Access / Protected Access 标签分别与列表的绿色 / 黄色使用相同主题变量。操作列顺序固定为 Copy / Open / Download。
 - Files 列表在内容区居中，桌面宽度受控且各列间距均衡；窄屏切换为紧凑卡片，不允许产生横向滚动。
+- 页面共享右上角亮暗主题切换；首次跟随系统，手动选择保存在浏览器本地。Copy 复制对应 Open 的绝对链接，保留单文件 `key`，不得复制浏览 UUID 或下载参数；复制失败必须提示。UI 脚本仅通过固定 CSP SHA-256 哈希授权，修改脚本须同步哈希。
+- 本地预览：`node scripts/preview.mjs`，仅使用模拟 R2 数据，监听 `127.0.0.1:8799`。
 - Pages 上传只能使用 `pages-dist`，不得上传仓库根目录。
 - `direction-approved.md` 仅是历史决策记录，不得保留或重新加入仓库。
 

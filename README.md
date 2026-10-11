@@ -23,7 +23,7 @@ R2Gate 是一个精简的 Cloudflare R2 文件读取鉴权与上传工具：Work
 | `BROWSE_UUID` | 是 | Plaintext 高熵 Bearer 凭据，最长 128 字符，只用于查看全部文件。 |
 | `DISPLAY_TIME_ZONE` | 否 | 有效 IANA 时区；默认 `Asia/Singapore`，页面显示 `GMT+8`。 |
 
-根路径 `/` 会一次检查全部配置。全部有效时返回独立的 Material Design 3 深色 Status 页面；它与 Files 使用相同的 960px 内容宽度，并在桌面视口中纵向居中。页面显示：
+根路径 `/` 会一次检查全部配置。全部有效时返回独立的 Material Design 3 Status 页面（支持亮色和暗色）；它与 Files 使用相同的 1120px 内容宽度，并在桌面视口中纵向居中。页面显示：
 
 ```text
 R2Gate is running successfully.
@@ -151,17 +151,25 @@ https://example.com/_files
 https://example.com/_files?uuid=your-browse-uuid
 ```
 
-Files 与 Status 是两个独立页面，共用深色样式和 Status / Files / License / GitHub 导航。License 使用奖章图标，在当前页面以弹窗展示仓库内置的 MIT License，可用关闭按钮、Esc 或点击遮罩关闭。列表在内容区居中，桌面端按 Object Key / Access / Type / Size / Uploaded / Open / Download 紧凑排列；窄屏自动切换为带 44px Open 和 Download 图标按钮的卡片。文件主体仅展示信息，点击 Open 按钮打开对象，点击 Download 按钮则使用 `download=1` 触发浏览器下载。
+Files 与 Status 是两个独立页面，共用亮暗主题样式和 Status / Files / License / GitHub 导航。License 使用奖章图标，在当前页面以弹窗展示仓库内置的 MIT License，可用关闭按钮、Esc 或点击遮罩关闭。列表在内容区居中，桌面端按 Object Key / Access / Type / Size / Uploaded / Copy / Open / Download 紧凑排列；窄屏自动切换为带 44px Copy、Open 和 Download 图标按钮的卡片。文件主体仅展示信息，点击 Open 按钮打开对象，点击 Download 按钮则使用 `download=1` 触发浏览器下载。Copy 复制对应 Open 的完整绝对链接（受保护对象保留 `key`，不包含浏览凭据 UUID 或 `download=1`）；成功或失败会给出提示。
 
+- Status 与 Files 的中心内容最大宽度统一为 1120px，操作列按 Copy / Open / Download 排列；顶部不显示 Public access / Protected access 标签，标题旁的 Public Access / Protected Access 标签分别与列表中的绿色 / 黄色保持一致。
+- 右上角太阳 / 月亮按钮切换亮暗主题，Status、Files、错误页与 License 弹窗共享 Material Design 3 色彩角色；首次跟随系统，手动选择存入本地浏览器并跨页面保留。浏览器禁用本地存储时仍可切换当前页面。
+- Copy 在 HTTPS 或 localhost 安全上下文优先使用 Clipboard API；不支持时尝试浏览器复制兼容方式，拒绝复制时明确提示失败。页面只允许由固定 SHA-256 哈希授权的 UI 脚本，修改脚本时必须同步 CSP 哈希。
 - 公开页只显示无需密钥的对象；全部页标签显示 `Protected`。
 - 类型来自同一次 R2 `list()` 返回的 HTTP metadata；缺失时显示 `application/octet-stream`，不会逐项调用 `get()` 或 `head()`。
 - 每次最多查询 200 项，并依据 R2 的 `truncated` 与 cursor 分页；缺失、超长或重复的后续 cursor 会受控失败，避免静默截断或分页循环。
 - 全部文件的后续页使用 `BROWSE_UUID` 签发的 cursor 专用 HMAC-SHA-256 令牌，不重复暴露 UUID。
 - 上传时间精确到秒。默认示例为 `25 Aug 2026 08:00:00`，表头显示 `Uploaded (GMT+8)`；自定义时区时显示对应 IANA 名称。
+- 时间格式化器只复用最近一个有效时区的实例，避免每次请求重复初始化；切换时区会替换实例，无效时区仍返回配置错误。缓存不保存文件元数据或凭据。
 - 页面不显示 UUID 或密钥文本，但受保护对象链接本身包含 `key`，可在浏览器开发者工具中查看。
 - 受保护对象的下载链接同样包含现有 `key`，并沿用完全相同的鉴权。
 - 页面使用 `no-store`、`no-referrer`、`noindex`、CSP、禁止嵌入、HTML 转义和 URL 编码。
 - `/_files` 只查询和读取，不提供上传、覆盖或删除功能。
+
+## 本地页面预览
+
+运行 `node scripts/preview.mjs`，访问 `http://127.0.0.1:8799/` 或 `http://127.0.0.1:8799/_files?uuid=preview-browse`。服务仅绑定本机，使用内存中的模拟文件和演示访问密钥，不读取上传配置，不连接 Cloudflare，不写入 R2。用 Ctrl+C 停止。
 
 ## Python 上传
 

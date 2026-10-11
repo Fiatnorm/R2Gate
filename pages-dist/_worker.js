@@ -54,9 +54,62 @@ const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"
   </g>
 </svg>`;
 
+// Static UI code only: user-controlled object names never enter this script.
+const APP_SCRIPT = `(() => {
+  const root = document.documentElement;
+  const preference = matchMedia('(prefers-color-scheme: dark)');
+  let saved;
+  try { saved = localStorage.getItem('r2gate-theme'); } catch {}
+  const apply = (theme) => {
+    root.dataset.theme = theme;
+    const toggle = document.querySelector('.theme-toggle');
+    if (toggle) {
+      toggle.setAttribute('aria-pressed', String(theme === 'dark'));
+      toggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+      toggle.title = toggle.getAttribute('aria-label');
+    }
+  };
+  apply(saved === 'light' || saved === 'dark' ? saved : preference.matches ? 'dark' : 'light');
+  preference.addEventListener('change', () => { if (!saved) apply(preference.matches ? 'dark' : 'light'); });
+  document.addEventListener('DOMContentLoaded', () => {
+    apply(root.dataset.theme);
+    document.querySelector('.theme-toggle').addEventListener('click', () => {
+      saved = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      apply(saved);
+      try { localStorage.setItem('r2gate-theme', saved); } catch {}
+    });
+    const feedback = document.querySelector('.copy-feedback');
+    let timer;
+    document.querySelectorAll('.copy-button').forEach((button) => {
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        const link = new URL(button.dataset.copyHref, location.origin).href;
+        let copied = false;
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(link);
+            copied = true;
+          } else {
+            const field = document.createElement('textarea');
+            field.value = link;
+            field.className = 'clipboard-field';
+            document.body.append(field);
+            try { field.select(); copied = document.execCommand('copy'); } finally { field.remove(); button.focus(); }
+          }
+        } catch {}
+        clearTimeout(timer);
+        feedback.textContent = copied ? 'Link copied.' : 'Could not copy link. Please try again.';
+        feedback.hidden = false;
+        timer = setTimeout(() => { feedback.hidden = true; }, 3500);
+        button.disabled = false;
+      });
+    });
+  });
+})();`;
+
 const PAGE_HEADERS = {
   ...CORS_HEADERS,
-  "content-security-policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  "content-security-policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'sha256-roJoE3fJhKcYFGjGlSI1Gm9Ce+b9agme0tDYpFQSpAk='; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
   "content-type": "text/html; charset=utf-8",
   "referrer-policy": "no-referrer",
   "x-content-type-options": "nosniff",
@@ -92,6 +145,38 @@ const APP_STYLES = `
       --warning-container: #4d4112;
       --error: #ffb4ab;
       --error-container: #5f1717;
+      --on-success: #063824;
+      --on-success-container: #d6f6e4;
+      --on-warning-container: #ffe38a;
+      --on-error: #690005;
+      --on-error-container: #ffdad6;
+    }
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --surface: #fef7ff;
+      --surface-container-low: #f7f2fa;
+      --surface-container: #f3edf7;
+      --surface-container-high: #ece6f0;
+      --surface-container-highest: #e6e0e9;
+      --on-surface: #1d1b20;
+      --on-surface-variant: #49454f;
+      --outline: #79747e;
+      --outline-variant: #cac4d0;
+      --primary: #6750a4;
+      --on-primary: #ffffff;
+      --primary-container: #eaddff;
+      --on-primary-container: #21005d;
+      --success: #286a48;
+      --success-container: #b6f2cc;
+      --on-success: #ffffff;
+      --on-success-container: #002111;
+      --warning: #715c00;
+      --warning-container: #ffdf90;
+      --on-warning-container: #241a00;
+      --error: #b3261e;
+      --error-container: #f9dedc;
+      --on-error: #ffffff;
+      --on-error-container: #410e0b;
     }
     *, *::before, *::after { box-sizing: border-box; }
     html { min-width: 320px; background: var(--surface); }
@@ -102,7 +187,6 @@ const APP_STYLES = `
     .topbar { position: fixed; z-index: 20; inset: 0 0 auto 0; display: flex; align-items: center; justify-content: space-between; height: 72px; padding: 0 24px 0 18px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-low); }
     .brand-lockup { display: inline-flex; align-items: center; gap: 12px; min-height: 48px; color: var(--on-surface); text-decoration: none; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
     .brand-icon { width: 44px; height: 44px; flex: 0 0 auto; }
-    .top-meta { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: 999px; background: var(--surface-container-highest); color: var(--on-surface-variant); font-size: 13px; font-weight: 700; letter-spacing: .02em; }
     .nav-rail { position: fixed; z-index: 15; inset: 72px auto 0 0; width: 88px; padding: 16px 8px; border-right: 1px solid var(--outline-variant); background: var(--surface-container-low); }
     .nav-rail nav { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; }
     .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 64px; min-height: 64px; padding: 7px 4px; border: 0; border-radius: 22px; background: transparent; color: var(--on-surface-variant); font: inherit; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; transition: background-color 160ms ease, color 160ms ease, transform 160ms ease; }
@@ -110,8 +194,8 @@ const APP_STYLES = `
     .nav-item:hover { background: var(--surface-container-high); color: var(--on-surface); }
     .nav-item:active { transform: scale(.97); }
     .nav-item.active { background: var(--primary-container); color: var(--on-primary-container); }
-    .nav-item.disabled { color: #706c78; cursor: not-allowed; }
-    .nav-item.disabled:hover { background: transparent; color: #706c78; }
+    .nav-item.disabled { color: var(--outline); cursor: not-allowed; }
+    .nav-item.disabled:hover { background: transparent; color: var(--outline); }
     .nav-item.license { margin-top: auto; }
     .license-dialog { width: min(720px, calc(100% - 48px)); max-height: min(640px, calc(100dvh - 96px)); margin: auto; padding: 0; overflow: hidden; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container); color: var(--on-surface); box-shadow: 0 24px 80px rgb(0 0 0 / .58); }
     .license-dialog::backdrop { background: rgb(5 5 10 / .76); backdrop-filter: blur(8px); }
@@ -125,36 +209,36 @@ const APP_STYLES = `
     .license-copy::first-line { color: var(--success); }
     .page-shell { min-height: 100vh; margin-left: 88px; padding-top: 72px; }
     .page-content { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 48px 0 64px; }
-    .files-view, .status-view { width: min(960px, 100%); margin: 0 auto; }
+    .files-view, .status-view { width: min(1120px, 100%); margin: 0 auto; }
     .page-header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
     .eyebrow { margin: 0 0 8px; color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
     h1 { margin: 0; font-size: clamp(38px, 5vw, 58px); font-weight: 520; letter-spacing: -.035em; line-height: 1.05; text-wrap: balance; }
     .scope-chip { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: 999px; background: var(--primary-container); color: var(--on-primary-container); font-size: 13px; font-weight: 750; white-space: nowrap; }
     .status-view { display: grid; align-content: center; min-height: calc(100vh - 240px); }
     .status-view .page-header { margin-bottom: 24px; }
-    .status-card { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 22px; min-height: 144px; padding: 28px 32px; border: 1px solid #315544; border-radius: 28px; background: var(--success-container); }
-    .status-check { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 22px; background: var(--success); color: #063824; }
+    .status-card { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 22px; min-height: 144px; padding: 28px 32px; border: 1px solid var(--success); border-radius: 28px; background: var(--success-container); }
+    .status-check { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 22px; background: var(--success); color: var(--on-success); }
     .status-check svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-    .status-message { margin: 0; color: #d6f6e4; font-size: clamp(18px, 1.8vw, 22px); font-weight: 650; letter-spacing: -.015em; }
-    .ready-badge { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 1px solid #4c7b64; border-radius: 999px; color: var(--success); font-size: 12px; font-weight: 800; letter-spacing: .08em; }
-    .status-card.error { border-color: #8e3d39; background: var(--error-container); }
-    .status-card.error .status-check { background: var(--error); color: #690005; }
-    .status-card.error .status-message { color: #ffdad6; }
-    .status-card.error .ready-badge { border-color: #a74f49; color: var(--error); }
+    .status-message { margin: 0; color: var(--on-success-container); font-size: clamp(18px, 1.8vw, 22px); font-weight: 650; letter-spacing: -.015em; }
+    .ready-badge { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 1px solid var(--success); border-radius: 999px; color: var(--success); font-size: 12px; font-weight: 800; letter-spacing: .08em; }
+    .status-card.error { border-color: var(--error); background: var(--error-container); }
+    .status-card.error .status-check { background: var(--error); color: var(--on-error); }
+    .status-card.error .status-message { color: var(--on-error-container); }
+    .status-card.error .ready-badge { border-color: var(--error); color: var(--error); }
     .status-copy { min-width: 0; }
-    .status-detail { margin: 7px 0 0; color: #efb8b3; font-size: 14px; }
-    .status-issues { margin: 10px 0 0; padding-left: 20px; color: #ffdad6; font-size: 15px; }
+    .status-detail { margin: 7px 0 0; color: var(--on-error-container); font-size: 14px; }
+    .status-issues { margin: 10px 0 0; padding-left: 20px; color: var(--on-error-container); font-size: 15px; }
     .status-issues li + li { margin-top: 5px; }
-    .security-note { display: flex; align-items: center; gap: 12px; min-height: 52px; margin: 0 0 20px; padding: 12px 16px; border-radius: 16px; background: var(--warning-container); color: #ffe38a; font-size: 14px; font-weight: 650; }
+    .security-note { display: flex; align-items: center; gap: 12px; min-height: 52px; margin: 0 0 20px; padding: 12px 16px; border-radius: 16px; background: var(--warning-container); color: var(--on-warning-container); font-size: 14px; font-weight: 650; }
     .security-note svg { width: 21px; height: 21px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
     .file-list { overflow: hidden; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); }
-    .file-list-head, .file-row { display: grid; grid-template-columns: minmax(0, 1fr) 84px 108px; align-items: center; column-gap: 16px; }
-    .file-list-head { min-height: 44px; padding: 0 40px 0 16px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-high); color: var(--primary); font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-    .file-list-head-main, .file-main { display: grid; grid-template-columns: 32px minmax(130px, 1fr) 80px 104px 64px 164px; align-items: center; column-gap: 16px; min-width: 0; }
+    .file-list-head, .file-row { display: grid; grid-template-columns: minmax(0, 1fr) 88px 88px 116px; align-items: center; column-gap: 16px; }
+    .file-list-head { min-height: 44px; padding: 0 16px; border-bottom: 1px solid var(--outline-variant); background: var(--surface-container-high); color: var(--primary); font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .file-list-head-main, .file-main { display: grid; grid-template-columns: 34px minmax(160px, 1fr) 80px 120px 64px 164px; align-items: center; column-gap: 16px; min-width: 0; }
     .file-list-head-main > span:nth-child(n+3), .file-list-head > span:not(.file-list-head-main) { justify-self: center; text-align: center; }
     .file-list ul { margin: 0; padding: 0; list-style: none; }
     .file-list li + li { border-top: 1px solid var(--outline-variant); }
-    .file-row { min-height: 64px; padding: 0 40px 0 16px; color: var(--on-surface); transition: background-color 160ms ease; }
+    .file-row { min-height: 64px; padding: 0 16px; color: var(--on-surface); transition: background-color 160ms ease; }
     .file-row:hover { background: var(--surface-container-high); }
     .file-main { align-self: stretch; min-height: 64px; padding: 8px 0; }
     .file-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--surface-container-highest); color: var(--on-surface-variant); }
@@ -163,36 +247,44 @@ const APP_STYLES = `
     .object-name { display: block; overflow-wrap: anywhere; font-weight: 680; letter-spacing: -.01em; }
     .object-meta { display: none; margin-top: 3px; color: var(--on-surface-variant); font-size: 12px; }
     .access-badge { display: inline-flex; align-items: center; justify-content: center; justify-self: center; min-height: 30px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 750; }
-    .access-badge.public { background: #123f2b; color: #94f2bd; }
-    .access-badge.protected { background: #54470f; color: #ffe37d; }
+    .scope-chip.public, .access-badge.public { background: var(--success-container); color: var(--on-success-container); }
+    .scope-chip.protected, .access-badge.protected { background: var(--warning-container); color: var(--on-warning-container); }
     .type-cell { max-width: 100%; overflow: hidden; color: var(--on-surface-variant); font-size: 13px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
     .size-cell, .date-cell { justify-self: center; color: var(--on-surface-variant); font-size: 13px; font-variant-numeric: tabular-nums; text-align: center; }
-    .open-button, .download-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 999px; background: var(--primary-container); color: var(--on-primary-container); text-decoration: none; font-size: 12px; font-weight: 760; transition: box-shadow 160ms ease, filter 160ms ease, transform 160ms ease; }
-    .open-button svg, .download-button svg { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-    .open-button:hover, .download-button:hover { box-shadow: 0 8px 18px rgb(203 194 255 / .28); color: #fffaff; filter: brightness(1.18) saturate(1.08); transform: translateY(-1px); }
-    .open-button:active, .download-button:active { box-shadow: 0 3px 8px rgb(203 194 255 / .18); color: #f7f0ff; filter: brightness(1.08); transform: translateY(0) scale(.96); }
+    .open-button, .download-button, .copy-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 44px; min-height: 44px; padding: 0 14px; border: 0; font-family: inherit; cursor: pointer; border-radius: 999px; background: var(--primary-container); color: var(--on-primary-container); text-decoration: none; font-size: 12px; font-weight: 760; transition: box-shadow 160ms ease, filter 160ms ease, transform 160ms ease; }
+    .open-button svg, .download-button svg, .copy-button svg { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .open-button:hover, .download-button:hover, .copy-button:hover { box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 24%, transparent); background: color-mix(in srgb, var(--primary-container) 88%, var(--primary)); transform: translateY(-1px); }
+    .open-button:active, .download-button:active, .copy-button:active { background: color-mix(in srgb, var(--primary-container) 80%, var(--primary)); transform: translateY(0) scale(.96); }
+    .top-actions { display: flex; align-items: center; gap: 12px; }
+    .theme-toggle { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 999px; background: var(--surface-container-highest); color: var(--on-surface); cursor: pointer; }
+    .theme-toggle:hover { background: var(--primary-container); color: var(--on-primary-container); }
+    .theme-toggle svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .theme-sun, :root[data-theme="dark"] .theme-moon { display: none; }
+    :root[data-theme="dark"] .theme-sun { display: block; }
+    .copy-button:disabled { opacity: .6; cursor: wait; }
+    .copy-feedback { position: fixed; z-index: 40; bottom: 96px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 32px); padding: 14px 20px; border-radius: 16px; background: var(--on-surface); color: var(--surface); box-shadow: 0 4px 16px rgb(0 0 0 / .2); font-size: 14px; }
+    .clipboard-field { position: fixed; top: 0; left: -9999px; }
     .empty { display: grid; place-items: center; min-height: 180px; margin: 0; border: 1px solid var(--outline-variant); border-radius: 24px; background: var(--surface-container-low); color: var(--on-surface-variant); }
     .pagination { display: flex; justify-content: end; margin-top: 20px; }
     .next-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 0 22px; border-radius: 999px; background: var(--primary); color: var(--on-primary); text-decoration: none; font-size: 14px; font-weight: 760; transition: filter 160ms ease, transform 160ms ease; }
     .next-button:hover { filter: brightness(1.06); }
     .next-button:active { transform: scale(.98); }
     :focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
-    @media (max-width: 1100px) {
+    @media (max-width: 1240px) {
       .file-list-head { display: none; }
-      .file-row { grid-template-columns: minmax(0, 1fr) 44px 44px; gap: 8px; min-height: 82px; padding: 0 14px; }
+      .file-row { grid-template-columns: minmax(0, 1fr) repeat(3, 44px); gap: 8px; min-height: 82px; padding: 0 14px; }
       .file-main { grid-template-columns: 28px minmax(0, 1fr); gap: 8px; min-height: 82px; padding: 12px 0; }
       .file-icon { width: 28px; height: 28px; align-self: start; }
       .object-meta { display: block; overflow-wrap: anywhere; }
       .type-cell, .size-cell, .date-cell { display: none; }
       .access-badge { grid-column: 2; justify-self: start; min-height: 30px; padding: 0 9px; font-size: 11px; }
-      .open-button, .download-button { width: 44px; height: 44px; padding: 0; }
-      .open-label, .download-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+      .open-button, .download-button, .copy-button { width: 44px; height: 44px; padding: 0; }
+      .open-label, .download-label, .copy-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     }
     @media (max-width: 760px) {
       .topbar { height: 64px; padding: 0 16px; }
       .brand-lockup { gap: 10px; font-size: 20px; }
       .brand-icon { width: 38px; height: 38px; }
-      .top-meta { min-height: 36px; padding: 0 12px; font-size: 12px; }
       .nav-rail { inset: auto 0 0 0; width: auto; height: 76px; padding: 5px 8px max(5px, env(safe-area-inset-bottom)); border-top: 1px solid var(--outline-variant); border-right: 0; }
       .nav-rail nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
       .nav-item { width: 100%; min-height: 62px; border-radius: 20px; }
@@ -216,9 +308,12 @@ const APP_STYLES = `
       .next-button { width: 100%; }
     }
     @media (max-width: 420px) {
-      .top-meta { display: none; }
       .page-header { align-items: start; flex-direction: column; }
       .scope-chip { min-height: 36px; }
+    }
+    @media (max-width: 420px) {
+      .file-row { grid-template-columns: repeat(3, 44px) minmax(0, 1fr); padding: 12px; }
+      .file-main { grid-column: 1 / -1; min-height: 0; padding: 0; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
@@ -257,24 +352,26 @@ function navigation(activePage, filesEnabled = true) {
   return `<aside class="nav-rail" aria-label="Primary navigation"><nav>${statusItem}${filesItem}${licenseItem}${githubItem}</nav></aside>`;
 }
 
-function appPage({ title, activePage, topMeta = "", content, filesEnabled = true }) {
+function appPage({ title, activePage, content, filesEnabled = true }) {
   const licenseDialog = `<section class="license-dialog" id="license-dialog" popover role="dialog" aria-modal="true" aria-labelledby="license-title"><header class="license-dialog-header"><h2 class="license-dialog-title" id="license-title">MIT License</h2><button class="license-close" type="button" popovertarget="license-dialog" popovertargetaction="hide" aria-label="Close MIT License" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header><pre class="license-copy">${escapeHtml(LICENSE_TEXT.replace(/^MIT License\n\n/, ""))}</pre></section>`;
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
+  <meta name="color-scheme" content="light dark">
   <title>${escapeHtml(title)} · R2Gate</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <style>${APP_STYLES}</style>
+  <script>${APP_SCRIPT}</script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
-  <header class="topbar"><a class="brand-lockup" href="/" aria-label="R2Gate status">${databaseIcon()}<span>R2Gate</span></a>${topMeta ? `<span class="top-meta">${escapeHtml(topMeta)}</span>` : ""}</header>
+  <header class="topbar"><a class="brand-lockup" href="/" aria-label="R2Gate status">${databaseIcon()}<span>R2Gate</span></a><div class="top-actions"><button class="theme-toggle" type="button" aria-label="Switch theme" aria-pressed="false"><svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><svg class="theme-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 13A8.5 8.5 0 0 1 11 3.5 8.5 8.5 0 1 0 20.5 13Z"/></svg></button></div></header>
   ${navigation(activePage, filesEnabled)}
   <div class="page-shell"><main class="page-content" id="main-content">${content}</main></div>
   ${licenseDialog}
+  <div class="copy-feedback" role="status" aria-live="polite" hidden></div>
 </body>
 </html>`;
 }
@@ -366,8 +463,14 @@ function formatSize(size) {
   return `${value >= 10 ? value.toFixed(1) : value.toFixed(2)} ${units[unitIndex]}`;
 }
 
+// Keep only the latest valid formatter; no credentials or object metadata are cached.
+let uploadedFormatterCache;
+
 function createUploadedFormatter(timeZone) {
-  return new Intl.DateTimeFormat("en-GB", {
+  if (uploadedFormatterCache?.timeZone === timeZone) {
+    return uploadedFormatterCache.formatter;
+  }
+  const formatter = new Intl.DateTimeFormat("en-GB", {
     timeZone,
     day: "2-digit",
     month: "short",
@@ -377,6 +480,8 @@ function createUploadedFormatter(timeZone) {
     second: "2-digit",
     hourCycle: "h23",
   });
+  uploadedFormatterCache = { timeZone, formatter };
+  return formatter;
 }
 
 function formatUploaded(uploaded, formatter) {
@@ -416,7 +521,7 @@ function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken, displa
       <span class="type-cell" title="${type}">${type}</span>
       <span class="size-cell">${size}</span>
       <span class="date-cell">${uploaded}</span>
-    </div><a class="open-button" href="${escapeHtml(href)}" rel="noreferrer" aria-label="Open ${escapeHtml(object.key)}" title="Open ${escapeHtml(object.key)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 21H4V3h9l5 5v5M13 3v5h5"/><path d="M21 16h-6v6M15 16l7 7"/></svg><span class="open-label">Open</span></a><a class="download-button" href="${escapeHtml(downloadHref)}" download="${escapeHtml(filename)}" rel="noreferrer" aria-label="Download ${escapeHtml(object.key)}" title="Download ${escapeHtml(object.key)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"></path></svg><span class="download-label">Download</span></a></li>`;
+    </div><button class="copy-button" type="button" data-copy-href="${escapeHtml(href)}" aria-label="Copy link for ${escapeHtml(object.key)}" title="Copy link for ${escapeHtml(object.key)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></svg><span class="copy-label">Copy</span></button><a class="open-button" href="${escapeHtml(href)}" rel="noreferrer" aria-label="Open ${escapeHtml(object.key)}" title="Open ${escapeHtml(object.key)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 21H4V3h9l5 5v5M13 3v5h5"/><path d="M21 16h-6v6M15 16l7 7"/></svg><span class="open-label">Open</span></a><a class="download-button" href="${escapeHtml(downloadHref)}" download="${escapeHtml(filename)}" rel="noreferrer" aria-label="Download ${escapeHtml(object.key)}" title="Download ${escapeHtml(object.key)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"></path></svg><span class="download-label">Download</span></a></li>`;
   }).join("");
 
   let nextLink = "";
@@ -432,11 +537,11 @@ function filesPage({ objects, accessKeys, showAll, nextCursor, nextToken, displa
   const note = showAll
     ? `<p class="security-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="10" width="12" height="10" rx="2"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>Protected links contain an access key.</p>`
     : "";
-  const content = `<section class="files-view"><header class="page-header"><div><p class="eyebrow">${showAll ? "Authorized scope" : "Public scope"}</p><h1>${scope}</h1></div><span class="scope-chip">${showAll ? "Protected" : "Public"}</span></header>
+  const content = `<section class="files-view"><header class="page-header"><div><p class="eyebrow">${showAll ? "Authorized scope" : "Public scope"}</p><h1>${scope}</h1></div><span class="scope-chip ${showAll ? "protected" : "public"}">${showAll ? "Protected Access" : "Public Access"}</span></header>
     ${note}
-    ${rows ? `<section class="file-list" aria-label="${scope}"><div class="file-list-head" aria-hidden="true"><span class="file-list-head-main"><span></span><span>Object key</span><span>Access</span><span>Type</span><span>Size</span><span>Uploaded (${escapeHtml(timeZoneLabel)})</span></span><span>Open</span><span>Download</span></div><ul>${rows}</ul></section>` : `<p class="empty">${emptyMessage}</p>`}
+    ${rows ? `<section class="file-list" aria-label="${scope}"><div class="file-list-head" aria-hidden="true"><span class="file-list-head-main"><span></span><span>Object key</span><span>Access</span><span>Type</span><span>Size</span><span>Uploaded (${escapeHtml(timeZoneLabel)})</span></span><span>Copy</span><span>Open</span><span>Download</span></div><ul>${rows}</ul></section>` : `<p class="empty">${emptyMessage}</p>`}
     ${nextLink}</section>`;
-  return appPage({ title: scope, activePage: "files", topMeta: showAll ? "Protected access" : "Public access", content });
+  return appPage({ title: scope, activePage: "files", content });
 }
 
 function rootPage() {

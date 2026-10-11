@@ -5,3 +5,4 @@ __pycache__/
 .wrangler/
 .dev.vars*
 .env*
+/output/playwright/

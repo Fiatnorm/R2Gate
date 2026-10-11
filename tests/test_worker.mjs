@@ -1,7 +1,43 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createHash } from "node:crypto";
 
 import worker from "../worker.mjs";
+
+test("UI scripts are hash-authorized and Copy preserves encoded file access links", async () => {
+  const key = 'folder/报告 <script>& "?.txt';
+  const env = {
+    BUCKET: makeBucket({ missing: ["missing.txt"], listed: [makeListedObject(key), makeListedObject("public.txt")] }),
+    ACCESS_KEYS: JSON.stringify({ [key]: 'key&"value' }),
+    BROWSE_UUID: "browse-uuid",
+  };
+  for (const path of ["/", "/_files?uuid=browse-uuid", "/missing.txt"]) {
+    const response = await worker.fetch(new Request(`https://example.com${path}`), env);
+    const body = await response.text();
+    const scripts = [...body.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+    assert.equal(scripts.length, 1);
+    const hash = createHash("sha256").update(scripts[0][1]).digest("base64");
+    assert.ok(response.headers.get("content-security-policy").includes(`script-src 'sha256-${hash}'`));
+    assert.doesNotMatch(response.headers.get("content-security-policy"), /script-src 'unsafe-inline'/);
+    assert.match(body, /class="theme-toggle"/);
+    assert.match(body, /:root\[data-theme="light"\]/);
+    assert.doesNotMatch(scripts[0][1], /browse-uuid|key&amp;/);
+    if (path.startsWith("/_files")) {
+      const rows = [...body.matchAll(/<li class="file-row">([\s\S]*?)<\/li>/g)];
+      assert.equal(rows.length, 2);
+      for (const [, row] of rows) {
+        assert.match(row, /class="copy-button"[\s\S]*class="open-button"[\s\S]*class="download-button"/);
+        const open = row.match(/class="open-button" href="([^"]+)"/)[1];
+        const copy = row.match(/class="copy-button" type="button" data-copy-href="([^"]+)"/)[1];
+        assert.equal(copy, open);
+        assert.doesNotMatch(copy, /download=|uuid=/);
+      }
+      assert.match(body, /data-copy-href="\/_files\?object=folder%2F[^\"]+&amp;key=key%26%22value"/);
+      assert.doesNotMatch(body, /<script>&/);
+      assert.doesNotMatch(body, /Protected access|Public access|class="top-meta"/);
+    }
+  }
+});
 
 
 function makeObject(key) {
@@ -171,7 +207,7 @@ test("root reports deployment configuration", async () => {
   assert.match(body, /Copyright \(c\) 2026 Fiatnorm/);
   assert.match(body, /href="\/favicon\.svg"/);
   assert.match(body, /id="brand-orange"/);
-  assert.match(body, /\.files-view, \.status-view \{ width: min\(960px, 100%\); margin: 0 auto; \}/);
+  assert.match(body, /\.files-view, \.status-view \{ width: min\(1120px, 100%\); margin: 0 auto; \}/);
   assert.match(body, /\.status-view \{ display: grid; align-content: center; min-height: calc\(100vh - 240px\); \}/);
   assert.doesNotMatch(body, /class="file-list"/);
 
@@ -373,15 +409,15 @@ test("public file listing excludes protected objects and safely links exact keys
   assert.equal(response.headers.get("access-control-allow-origin"), "*");
   const body = await response.text();
   assert.match(body, /Public files/);
+  assert.match(body, /class="scope-chip public">Public Access<\/span>/);
+  assert.doesNotMatch(body, /Public access|Protected access|class="top-meta"/);
   assert.match(body, /class="files-view"/);
-  assert.match(body, /\.files-view, \.status-view \{ width: min\(960px, 100%\); margin: 0 auto; \}/);
+  assert.match(body, /\.files-view, \.status-view \{ width: min\(1120px, 100%\); margin: 0 auto; \}/);
   assert.match(body, /class="file-list"/);
   assert.match(body, /<li class="file-row"><div class="file-main"/);
   assert.doesNotMatch(body, /class="file-open"|<div class="file-main"[^>]*href=/);
   assert.match(body, /\.file-row:hover \{ background: var\(--surface-container-high\); \}/);
-  assert.match(body, /\.download-button:hover \{ box-shadow: 0 8px 18px rgb\(203 194 255 \/ \.28\); color: #fffaff; filter: brightness\(1\.18\) saturate\(1\.08\); transform: translateY\(-1px\); \}/);
-  assert.match(body, /\.download-button:active \{ box-shadow: 0 3px 8px rgb\(203 194 255 \/ \.18\); color: #f7f0ff; filter: brightness\(1\.08\); transform: translateY\(0\) scale\(\.96\); \}/);
-  assert.match(body, /<span>Object key<\/span><span>Access<\/span><span>Type<\/span><span>Size<\/span><span>Uploaded \(GMT\+8\)<\/span><\/span><span>Open<\/span><span>Download<\/span>/);
+  assert.match(body, /<span>Object key<\/span><span>Access<\/span><span>Type<\/span><span>Size<\/span><span>Uploaded \(GMT\+8\)<\/span><\/span><span>Copy<\/span><span>Open<\/span><span>Download<\/span>/);
   assert.match(body, /text\/plain/);
   assert.match(body, /25 Aug 2026 08:00:00/);
   assert.doesNotMatch(body, /Uploaded \(UTC\)| UTC/);
@@ -397,7 +433,7 @@ test("public file listing excludes protected objects and safely links exact keys
   assert.match(body, /href="\/_files\?object=public\.txt"/);
   assert.match(body, /href="\/_files\?object=public\.txt&amp;download=1" download="public\.txt"/);
   assert.doesNotMatch(body, /private\.txt/);
-  assert.doesNotMatch(body, /<script>/);
+  assert.doesNotMatch(body.replace(/<script>[\s\S]*?<\/script>/g, ""), /<script>/);
   assert.match(body, /folder\/&lt;script&gt;&amp; \?\.txt/);
   assert.match(body, /object=folder%2F%3Cscript%3E%26\+%3F\.txt/);
   assert.match(body, /object=folder%2F%3Cscript%3E%26\+%3F\.txt&amp;download=1/);
@@ -425,6 +461,30 @@ test("file listing supports an optional IANA display time zone", async () => {
   const body = await response.text();
   assert.match(body, /Uploaded \(America\/New_York\)/);
   assert.match(body, /24 Aug 2026 20:00:00/);
+});
+
+test("formatter reuse preserves timezone changes and rejects invalid zones after warmup", async () => {
+  const bucket = makeBucket({ listed: [makeListedObject("public.txt")] });
+  const env = { BUCKET: bucket, ACCESS_KEYS: "{}", BROWSE_UUID: "browse-uuid" };
+  for (const [timeZone, displayed] of [
+    ["Asia/Singapore", "25 Aug 2026 08:00:00"],
+    ["Asia/Singapore", "25 Aug 2026 08:00:00"],
+    ["America/New_York", "24 Aug 2026 20:00:00"],
+    ["UTC", "25 Aug 2026 00:00:00"],
+    ["Asia/Singapore", "25 Aug 2026 08:00:00"],
+  ]) {
+    const response = await worker.fetch(new Request("https://example.com/_files"), {
+      ...env, DISPLAY_TIME_ZONE: timeZone,
+    });
+    assert.equal(response.status, 200);
+    assert.ok((await response.text()).includes(displayed));
+  }
+  for (const timeZone of ["Not/A_Timezone", "Not/A_Timezone"]) {
+    await assertErrorPage(await worker.fetch(new Request("https://example.com/_files"), {
+      ...env, DISPLAY_TIME_ZONE: timeZone,
+    }), 500, "Invalid DISPLAY_TIME_ZONE configuration");
+  }
+  assert.equal(bucket.calls.list.length, 5);
 });
 
 
@@ -463,8 +523,8 @@ test("UUID listing requires the configured variable and creates working keyed li
   assert.equal(response.status, 200);
   const body = await response.text();
   assert.match(body, /All files/);
-  assert.match(body, /<span class="scope-chip">Protected<\/span>/);
-  assert.match(body, /Protected access/);
+  assert.match(body, /<span class="scope-chip protected">Protected Access<\/span>/);
+  assert.doesNotMatch(body, /Protected access|Public access/);
   assert.doesNotMatch(body, /<span class="scope-chip">All<\/span>|Public \+ Protected/);
   assert.match(body, /Protected links contain an access key\./);
   assert.match(body, /public\.txt/);
@@ -520,6 +580,46 @@ test("UUID listing requires the configured variable and creates working keyed li
   assert.equal(bucket.calls.list.length, listCalls);
 });
 
+
+test("full pages stay bounded under concurrent requests and recover after an R2 failure", async () => {
+  const objects = Array.from({ length: 200 }, (_, index) => makeListedObject(`file-${index}.txt`));
+  const calls = { list: 0, reads: 0 };
+  let failing = false;
+  const env = {
+    ACCESS_KEYS: "{}",
+    BROWSE_UUID: "browse-uuid",
+    BUCKET: {
+      async list(options) {
+        calls.list += 1;
+        assert.deepEqual(options, { limit: 200, include: ["httpMetadata"] });
+        if (failing) throw new Error("Temporary R2 failure");
+        return { objects, truncated: false };
+      },
+      async get() { calls.reads += 1; throw new Error("Unexpected object read"); },
+      async head() { calls.reads += 1; throw new Error("Unexpected metadata read"); },
+    },
+  };
+  const fetchPage = () => worker.fetch(new Request("https://example.com/_files"), env);
+  const responses = await Promise.all(Array.from({ length: 20 }, fetchPage));
+  for (const response of responses) {
+    assert.equal(response.status, 200);
+    assert.equal((await response.text()).match(/<li class="file-row">/g).length, 200);
+  }
+  assert.equal(calls.list, 20);
+  assert.equal(calls.reads, 0);
+  failing = true;
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    await assertErrorPage(await fetchPage(), 500, "Internal Server Error");
+  } finally {
+    console.error = originalError;
+  }
+  failing = false;
+  assert.equal((await fetchPage()).status, 200);
+  assert.equal(calls.list, 22);
+  assert.equal(calls.reads, 0);
+});
 
 test("file listing uses bounded cursor pagination and controls R2 errors", async () => {
   const bucket = makeBucket({
